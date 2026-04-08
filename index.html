@@ -150,7 +150,7 @@
                         Verify & Check-Out
                     </button>
                 </form>
-                <div id="checkOutMessage" class="mt-6 hidden font-bold p-3 rounded border"></div>
+                <div id="checkOutMessage" class="mt-6 hidden font-bold p-3 rounded border text-sm"></div>
             </div>
         </section>
 
@@ -181,6 +181,7 @@
                                         <th class="p-4">Check-In</th>
                                         <th class="p-4">Check-Out</th>
                                         <th class="p-4 text-center">Status</th>
+                                        <th class="p-4 text-center">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="visitorLogs" class="text-xs text-gray-700">
@@ -212,9 +213,20 @@
                 <svg class="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
             </div>
             <h3 class="text-xl font-bold text-uae-brown-dark mb-2 uppercase tracking-tight">Security Clear</h3>
-            <p class="text-xs text-gray-500 mb-6 font-medium">Email and check-out link sent.</p>
-            <div class="text-[9px] font-black text-gray-400 mb-1 uppercase tracking-widest">Digital Pass Code</div>
+            <p class="text-[10px] text-gray-500 mb-6 font-medium leading-relaxed">Registration complete. In a live environment, a security email is sent to the visitor with their departure link.</p>
+            
+            <div class="bg-stone-50 border p-4 rounded mb-6 text-left">
+                <div class="text-[9px] font-black text-uae-gold uppercase mb-2">Simulated Email Content</div>
+                <div class="text-[10px] text-gray-600 space-y-2">
+                    <p><strong>To:</strong> <span id="simEmail">...</span></p>
+                    <p>Welcome to the Embassy. Use the link below to check out when leaving:</p>
+                    <p class="text-blue-600 underline break-all font-mono" id="simLink">...</p>
+                </div>
+            </div>
+
+            <div class="text-[9px] font-black text-gray-400 mb-1 uppercase tracking-widest">Manual Pass Code</div>
             <div id="displayCode" class="text-4xl font-mono font-black tracking-widest text-uae-brown border-2 border-uae-gold p-5 rounded-lg mb-8 bg-stone-50">XXXXXX</div>
+            
             <button onclick="closeModal()" class="w-full bg-uae-brown text-white py-3 rounded font-bold uppercase tracking-widest">Dismiss</button>
         </div>
     </div>
@@ -267,11 +279,14 @@
             };
 
             visitors.unshift(v);
-            document.getElementById('displayCode').innerText = code;
-            document.getElementById('codeModal').style.display = 'flex';
             
-            // Simulation log
-            console.log(`SECURE EMAIL TO ${v.email}: Code ${code}. Link: ${window.location.origin}${window.location.pathname}?checkout=${code}`);
+            // Update Modal UI
+            document.getElementById('displayCode').innerText = code;
+            document.getElementById('simEmail').innerText = v.email;
+            const link = `${window.location.origin}${window.location.pathname}?checkout=${code}`;
+            document.getElementById('simLink').innerText = link;
+            
+            document.getElementById('codeModal').style.display = 'flex';
             
             e.target.reset();
             renderLogs();
@@ -291,14 +306,18 @@
             if (idx !== -1) {
                 visitors[idx].status = 'Completed';
                 visitors[idx].checkOut = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                msg.innerText = "SUCCESS: VISIT TERMINATED.";
-                msg.className = "mt-6 font-bold p-3 rounded border bg-green-50 text-green-700 border-green-200";
+                msg.innerText = `SUCCESS: VISIT TERMINATED FOR ${visitors[idx].name.toUpperCase()}.`;
+                msg.className = "mt-6 font-bold p-3 rounded border bg-green-50 text-green-700 border-green-200 text-sm";
                 renderLogs();
                 updateLiveFeed();
             } else {
                 msg.innerText = "ERROR: INVALID OR EXPIRED CODE.";
-                msg.className = "mt-6 font-bold p-3 rounded border bg-red-50 text-red-700 border-red-200";
+                msg.className = "mt-6 font-bold p-3 rounded border bg-red-50 text-red-700 border-red-200 text-sm";
             }
+        }
+
+        function forceCheckOut(code) {
+            processCheckOut(code);
         }
 
         function closeModal() { document.getElementById('codeModal').style.display = 'none'; }
@@ -309,15 +328,21 @@
             tbody.innerHTML = data.map(v => `
                 <tr class="border-b border-gray-100 hover:bg-stone-50">
                     <td class="p-4 font-bold uppercase">${v.name}</td>
-                    <td class="p-4 font-mono text-gray-500">${v.idNo}</td>
+                    <td class="p-4 font-mono text-gray-400 text-[10px]">${v.idNo}</td>
                     <td class="p-4">${v.company}</td>
-                    <td class="p-4"><span class="px-2 py-1 bg-stone-100 rounded">${v.purpose}</span></td>
+                    <td class="p-4"><span class="px-2 py-1 bg-stone-100 rounded text-[10px]">${v.purpose}</span></td>
                     <td class="p-4 text-blue-800 font-bold">${v.checkIn}</td>
                     <td class="p-4 text-amber-800 font-bold">${v.checkOut || '---'}</td>
                     <td class="p-4 text-center">
                         <span class="px-3 py-1 rounded-full text-[9px] font-black uppercase ${v.status === 'Active' ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-400'}">
                             ${v.status}
                         </span>
+                    </td>
+                    <td class="p-4 text-center">
+                        ${v.status === 'Active' ? 
+                            `<button onclick="forceCheckOut('${v.code}')" class="text-[9px] bg-red-50 text-red-600 border border-red-200 px-2 py-1 rounded font-bold hover:bg-red-600 hover:text-white transition-all uppercase">Check Out</button>` 
+                            : `<span class="text-[9px] text-gray-400 font-bold uppercase italic">Closed</span>`
+                        }
                     </td>
                 </tr>
             `).join('');
