@@ -167,6 +167,7 @@
                             <div class="flex gap-2">
                                 <input type="text" id="search_query" oninput="handleSearch()" class="border border-gray-200 p-2 rounded text-sm focus:outline-none" placeholder="Search...">
                                 <button onclick="exportToCSV()" class="bg-emerald-700 text-white px-4 py-2 rounded text-xs font-bold">Excel</button>
+                                <button onclick="clearDatabase()" class="bg-red-700 text-white px-4 py-2 rounded text-xs font-bold">Reset</button>
                             </div>
                         </div>
 
@@ -232,20 +233,31 @@
     </div>
 
     <script>
-        let visitors = [];
+        // Data Handling with Persistence
+        let visitors = JSON.parse(localStorage.getItem('embassy_visitors')) || [];
+
+        function saveToStorage() {
+            localStorage.setItem('embassy_visitors', JSON.stringify(visitors));
+        }
 
         // Check URL for Admin or Auto-Checkout
         window.onload = () => {
             const urlParams = new URLSearchParams(window.location.search);
+            
+            // Admin Check
             if (urlParams.get('admin') === 'true') {
                 document.getElementById('tab-admin').style.display = 'block';
             }
+
+            // URL Check-Out Trigger
             const checkoutCode = urlParams.get('checkout');
             if (checkoutCode) {
                 showPage('check-out');
                 document.getElementById('out_code').value = checkoutCode.toUpperCase();
                 processCheckOut(checkoutCode.toUpperCase());
             }
+
+            // Initial UI Render
             renderLogs();
             updateLiveFeed();
         };
@@ -279,6 +291,7 @@
             };
 
             visitors.unshift(v);
+            saveToStorage();
             
             // Update Modal UI
             document.getElementById('displayCode').innerText = code;
@@ -306,6 +319,8 @@
             if (idx !== -1) {
                 visitors[idx].status = 'Completed';
                 visitors[idx].checkOut = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                saveToStorage();
+                
                 msg.innerText = `SUCCESS: VISIT TERMINATED FOR ${visitors[idx].name.toUpperCase()}.`;
                 msg.className = "mt-6 font-bold p-3 rounded border bg-green-50 text-green-700 border-green-200 text-sm";
                 renderLogs();
@@ -318,6 +333,15 @@
 
         function forceCheckOut(code) {
             processCheckOut(code);
+        }
+
+        function clearDatabase() {
+            if(confirm("Warning: This will delete ALL visitor records forever. Proceed?")) {
+                visitors = [];
+                saveToStorage();
+                renderLogs();
+                updateLiveFeed();
+            }
         }
 
         function closeModal() { document.getElementById('codeModal').style.display = 'none'; }
