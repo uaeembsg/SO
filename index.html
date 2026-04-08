@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UAE Embassy Visitor Management System</title>
+    <title>UAE Embassy Visitor Management System - DIAGNOSTIC</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- EmailJS SDK -->
@@ -59,51 +59,42 @@
             outline: none !important;
         }
 
-        .loader {
-            border: 4px solid rgba(93, 64, 55, 0.1);
-            border-top: 4px solid var(--uae-brown);
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .toast {
+        .debug-panel {
             position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 16px 24px;
-            background: white;
-            border-left: 4px solid var(--uae-gold);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            border-radius: 4px;
-            z-index: 1000;
-            animation: slideIn 0.3s ease-out;
+            bottom: 20px;
+            left: 20px;
+            background: #222;
+            color: #0f0;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            max-width: 400px;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 2px solid #0f0;
+            z-index: 999;
+            box-shadow: 0 0 10px rgba(0,255,0,0.3);
         }
 
-        @keyframes slideIn {
-            from {
-                transform: translateX(400px);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
+        .debug-line { margin: 3px 0; }
+        .debug-ok { color: #0f0; }
+        .debug-error { color: #f00; }
+        .debug-warn { color: #ff0; }
+        .debug-info { color: #0ff; }
 
-        /* Logic for tab visibility */
         #tab-admin { display: none; }
     </style>
 </head>
 <body class="min-h-screen">
 
-    <!-- Header - Unified Instance -->
+    <!-- DEBUG PANEL -->
+    <div class="debug-panel">
+        <div class="debug-line debug-info">🔍 DEBUG LOG</div>
+        <div id="debugLog" style="border-top: 1px solid #0f0; margin-top: 8px; padding-top: 8px;"></div>
+    </div>
+
+    <!-- Header -->
     <header class="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-40">
         <div class="max-w-[95%] mx-auto px-4 py-3 flex flex-col md:flex-row justify-between items-center">
             <div class="flex items-center space-x-4">
@@ -123,7 +114,7 @@
         </div>
     </header>
 
-    <main class="max-w-7xl mx-auto p-4 md:p-8">
+    <main class="max-w-7xl mx-auto p-4 md:p-8 pb-96">
         
         <!-- Registration Form -->
         <section id="page-check-in" class="page max-w-2xl mx-auto transition-opacity duration-300">
@@ -174,7 +165,7 @@
                     </div>
 
                     <div class="pt-4">
-                        <button type="submit" id="submitBtn" class="w-full bg-uae-brown text-white font-black py-4 rounded-lg hover:bg-uae-brown-dark transition-all uppercase tracking-[0.2em] shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                        <button type="submit" id="submitBtn" class="w-full bg-uae-brown text-white font-black py-4 rounded-lg hover:bg-uae-brown-dark transition-all uppercase tracking-[0.2em] shadow-lg disabled:opacity-50">
                             Finalize Entry & Send Pass
                         </button>
                     </div>
@@ -198,7 +189,7 @@
                         <label class="block text-[10px] font-black text-gray-400 uppercase mb-2 tracking-widest text-left">Security Code</label>
                         <input type="text" id="out_code" required class="w-full text-center text-3xl tracking-[0.8rem] border-uae-gold border-2 p-5 rounded-xl uppercase font-mono bg-stone-50 font-black text-uae-brown" placeholder="XXXXXX">
                     </div>
-                    <button type="submit" class="w-full bg-uae-dark text-white font-black py-4 rounded-lg hover:bg-black transition-all uppercase tracking-widest shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
+                    <button type="submit" class="w-full bg-uae-dark text-white font-black py-4 rounded-lg hover:bg-black transition-all uppercase tracking-widest shadow-md">
                         Authorize Departure
                     </button>
                 </form>
@@ -215,8 +206,8 @@
                         <p class="text-[10px] uppercase tracking-[0.3em] text-gray-400 font-bold">Confidential Visitor Records</p>
                     </div>
                     <div class="flex gap-3">
-                        <button onclick="exportToCSV()" class="bg-stone-800 text-white px-5 py-2.5 rounded-md text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors">Export CSV</button>
-                        <button onclick="clearDatabase()" class="bg-red-50 text-red-600 border border-red-100 px-5 py-2.5 rounded-md text-[10px] font-black uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all">Clear Database</button>
+                        <button onclick="exportToCSV()" class="bg-stone-800 text-white px-5 py-2.5 rounded-md text-[10px] font-black uppercase tracking-widest hover:bg-black">Export CSV</button>
+                        <button onclick="clearDatabase()" class="bg-red-50 text-red-600 border border-red-100 px-5 py-2.5 rounded-md text-[10px] font-black uppercase">Clear Database</button>
                     </div>
                 </div>
 
@@ -260,19 +251,44 @@
 
             <div id="emailStatus" class="mb-6 text-sm font-medium"></div>
             
-            <button onclick="closeModal()" class="w-full bg-uae-brown text-white py-4 rounded-xl font-black uppercase tracking-[0.2em] hover:bg-uae-brown-dark transition-all">Close & Return</button>
+            <button onclick="closeModal()" class="w-full bg-uae-brown text-white py-4 rounded-xl font-black uppercase tracking-[0.2em] hover:bg-uae-brown-dark">Close & Return</button>
         </div>
     </div>
 
     <script>
+        // ===== DEBUG SYSTEM =====
+        const debugLog = [];
+        function debug(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}`;
+            debugLog.push({ message: logEntry, type });
+            
+            const debugElement = document.getElementById('debugLog');
+            const line = document.createElement('div');
+            line.className = `debug-line debug-${type}`;
+            line.textContent = logEntry;
+            debugElement.appendChild(line);
+            
+            if (debugElement.children.length > 20) {
+                debugElement.removeChild(debugElement.firstChild);
+            }
+            
+            console.log(logEntry, message);
+        }
+
         // ===== CONFIGURATION =====
         const EMAIL_JS_PUBLIC_KEY = "XzZCCmauKvPjDMelV"; 
         const EMAIL_JS_SERVICE_ID = "service_v1hs3lg"; 
         const EMAIL_JS_TEMPLATE_ID = "template_axfbbdo"; 
 
-        // Initialize EmailJS once
+        debug(`Config loaded: KEY=${EMAIL_JS_PUBLIC_KEY ? '✓' : '✗'}, SERVICE=${EMAIL_JS_SERVICE_ID}, TEMPLATE=${EMAIL_JS_TEMPLATE_ID}`, EMAIL_JS_PUBLIC_KEY ? 'ok' : 'error');
+
+        // Initialize EmailJS
         if (EMAIL_JS_PUBLIC_KEY) {
             emailjs.init(EMAIL_JS_PUBLIC_KEY);
+            debug('EmailJS initialized', 'ok');
+        } else {
+            debug('⚠ EmailJS public key missing!', 'error');
         }
 
         // ===== STATE MANAGEMENT =====
@@ -282,51 +298,29 @@
             try {
                 const data = localStorage.getItem('embassy_v_db');
                 visitors = data ? JSON.parse(data) : [];
+                debug(`Loaded ${visitors.length} visitors from storage`, 'ok');
+                return true;
             } catch (e) {
-                console.error("Storage error:", e);
-                visitors = [];
+                debug(`Storage load error: ${e.message}`, 'error');
+                return false;
             }
         }
 
         function saveToStorage() {
             try {
                 localStorage.setItem('embassy_v_db', JSON.stringify(visitors));
+                debug(`Saved ${visitors.length} visitors to storage`, 'ok');
                 renderLogs();
+                return true;
             } catch (e) {
-                console.error("Save error:", e);
-                showToast('Error saving data', 'error');
+                debug(`Storage save error: ${e.message}`, 'error');
+                return false;
             }
-        }
-
-        // ===== UTILITY FUNCTIONS =====
-        function showToast(message, type = 'info') {
-            const toast = document.createElement('div');
-            toast.className = 'toast';
-            toast.textContent = message;
-            
-            if (type === 'error') {
-                toast.style.borderLeftColor = '#EF4444';
-                toast.style.color = '#DC2626';
-            } else if (type === 'success') {
-                toast.style.borderLeftColor = '#10B981';
-                toast.style.color = '#059669';
-            }
-            
-            document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 4000);
-        }
-
-        function generateSecurityCode() {
-            return Math.random().toString(36).substring(2, 8).toUpperCase();
-        }
-
-        function getCheckoutLink() {
-            const baseUrl = window.location.href.split('?')[0];
-            return baseUrl;
         }
 
         // ===== PAGE NAVIGATION =====
         function showPage(pageId) {
+            debug(`Showing page: ${pageId}`, 'info');
             document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
             document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
             
@@ -340,16 +334,14 @@
         // ===== FORM HANDLERS =====
         document.getElementById('checkInForm').addEventListener('submit', async (e) => {
             e.preventDefault();
+            debug('Form submitted', 'info');
             
             const submitBtn = document.getElementById('submitBtn');
-            const formMessage = document.getElementById('formMessage');
-            
             submitBtn.disabled = true;
             submitBtn.innerText = "PROCESSING...";
-            formMessage.classList.add('hidden');
 
             try {
-                const code = generateSecurityCode();
+                const code = Math.random().toString(36).substring(2, 8).toUpperCase();
                 const now = new Date();
                 
                 const visitor = {
@@ -367,54 +359,60 @@
                     checkOut: null
                 };
 
-                // Add to storage immediately
-                visitors.unshift(visitor);
-                saveToStorage();
+                debug(`New visitor: ${visitor.name} (${visitor.email})`, 'info');
+                debug(`Generated code: ${code}`, 'ok');
 
-                // Send email if EmailJS is available
+                // Save FIRST
+                visitors.unshift(visitor);
+                if (!saveToStorage()) {
+                    throw new Error('Failed to save to storage');
+                }
+                debug('✓ Visitor saved to database', 'ok');
+
+                // Then send email
                 if (EMAIL_JS_PUBLIC_KEY) {
                     submitBtn.innerText = "SENDING EMAIL...";
+                    debug('Attempting to send email via EmailJS...', 'info');
                     
-                    const checkoutLink = `${getCheckoutLink()}?checkout=${code}`;
+                    const baseUrl = window.location.href.split('?')[0];
+                    const checkoutLink = `${baseUrl}?checkout=${code}`;
                     
-                    try {
-                        const response = await emailjs.send(
-                            EMAIL_JS_SERVICE_ID, 
-                            EMAIL_JS_TEMPLATE_ID, 
-                            {
-                                to_email: visitor.email,
-                                visitor_name: visitor.name,
-                                check_in_time: visitor.checkIn,
-                                check_in_date: visitor.date,
-                                checkout_link: checkoutLink,
-                                security_code: code,
-                                company: visitor.company,
-                                purpose: visitor.purpose
-                            }
-                        );
-                        
-                        console.log('Email sent successfully:', response);
-                        document.getElementById('emailStatus').innerHTML = '<span style="color: #10B981; font-weight: bold;">✓ Email sent successfully</span>';
-                    } catch (emailError) {
-                        console.error('EmailJS error:', emailError);
-                        document.getElementById('emailStatus').innerHTML = '<span style="color: #F59E0B;">⚠ Email delivery pending (check your account)</span>';
-                    }
+                    const emailData = {
+                        to_email: visitor.email,
+                        visitor_name: visitor.name,
+                        check_in_time: visitor.checkIn,
+                        check_in_date: visitor.date,
+                        checkout_link: checkoutLink,
+                        security_code: code,
+                        company: visitor.company,
+                        purpose: visitor.purpose
+                    };
+
+                    debug(`Email params: to=${visitor.email}, code=${code}`, 'info');
+
+                    const response = await emailjs.send(
+                        EMAIL_JS_SERVICE_ID, 
+                        EMAIL_JS_TEMPLATE_ID, 
+                        emailData
+                    );
+                    
+                    debug(`✓ Email sent! Response: ${response.status}`, 'ok');
+                    document.getElementById('emailStatus').innerHTML = '<span style="color: #10B981; font-weight: bold;">✓ Email sent successfully</span>';
+                } else {
+                    debug('⚠ EmailJS not initialized', 'warn');
+                    document.getElementById('emailStatus').innerHTML = '<span style="color: #F59E0B;">⚠ Email service not available</span>';
                 }
 
-                // Show success modal
+                // Show modal
                 document.getElementById('displayCode').innerText = code;
                 document.getElementById('confEmail').innerText = visitor.email;
                 document.getElementById('codeModal').style.display = 'flex';
                 
-                // Reset form
+                debug('Success modal displayed', 'ok');
                 e.target.reset();
                 
             } catch (error) {
-                console.error('Form error:', error);
-                formMessage.classList.remove('hidden');
-                formMessage.className = 'text-sm p-4 rounded-lg bg-red-50 text-red-700 border border-red-200';
-                formMessage.innerText = 'Error processing registration. Please try again.';
-                showToast('Error processing registration', 'error');
+                debug(`ERROR: ${error.message}`, 'error');
             } finally {
                 submitBtn.disabled = false;
                 submitBtn.innerText = "Finalize Entry & Send Pass";
@@ -424,22 +422,18 @@
         document.getElementById('checkOutForm').addEventListener('submit', (e) => {
             e.preventDefault();
             const code = document.getElementById('out_code').value.trim().toUpperCase();
-            
-            if (!code) {
-                showToast('Please enter security code', 'error');
-                return;
-            }
-            
+            debug(`Checkout attempt with code: ${code}`, 'info');
             processCheckOut(code);
         });
 
         function processCheckOut(code) {
-            // Reload to ensure latest data
             loadFromStorage();
             
             const idx = visitors.findIndex(v => v.code.toUpperCase() === code.toUpperCase());
             const msg = document.getElementById('checkOutMessage');
             msg.classList.remove('hidden');
+
+            debug(`Searching for code ${code}... found: ${idx !== -1 ? 'YES' : 'NO'}`, idx !== -1 ? 'ok' : 'warn');
 
             if (idx !== -1) {
                 const visitor = visitors[idx];
@@ -447,7 +441,7 @@
                 if (visitor.status === 'Completed') {
                     msg.innerText = "⚠ VISITOR HAS ALREADY DEPARTED.";
                     msg.className = "mt-6 font-bold p-4 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 text-xs tracking-widest";
-                    showToast('Visitor already checked out', 'info');
+                    debug('Already checked out', 'warn');
                 } else {
                     visitor.status = 'Completed';
                     visitor.checkOut = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -455,21 +449,21 @@
                     
                     msg.innerText = "✓ EXIT AUTHORIZED. SAFE TRAVELS.";
                     msg.className = "mt-6 font-bold p-4 rounded-lg bg-green-50 text-green-700 border border-green-200 text-xs tracking-widest";
-                    showToast('Checkout successful', 'success');
-                    
-                    // Clear input after success
+                    debug(`✓ ${visitor.name} checked out at ${visitor.checkOut}`, 'ok');
                     document.getElementById('out_code').value = '';
                 }
             } else {
-                msg.innerText = "✗ INVALID SECURITY CODE. PLEASE TRY AGAIN.";
+                msg.innerText = "✗ INVALID SECURITY CODE.";
                 msg.className = "mt-6 font-bold p-4 rounded-lg bg-red-50 text-red-700 border border-red-200 text-xs tracking-widest";
-                showToast('Invalid security code', 'error');
+                debug('Code not found in database', 'error');
             }
         }
 
         function renderLogs() {
             const tbody = document.getElementById('visitorLogs');
             if (!tbody) return;
+
+            debug(`Rendering ${visitors.length} visitors in admin table`, 'info');
 
             if (visitors.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="5" class="p-20 text-center text-gray-300 font-black uppercase tracking-widest">Registry Empty</td></tr>`;
@@ -479,12 +473,12 @@
             tbody.innerHTML = visitors.map(v => `
                 <tr class="hover:bg-stone-50 transition-colors">
                     <td class="p-5 border-l-4 ${v.status === 'Active' ? 'border-uae-gold' : 'border-gray-200'}">
-                        <div class="font-black text-uae-brown-dark text-base uppercase">${escapeHtml(v.name)}</div>
-                        <div class="text-[10px] text-gray-400 font-bold uppercase tracking-tight">${escapeHtml(v.phone)} • ${escapeHtml(v.idNo)}</div>
+                        <div class="font-black text-uae-brown-dark text-base uppercase">${v.name}</div>
+                        <div class="text-[10px] text-gray-400 font-bold uppercase tracking-tight">${v.phone} • ${v.idNo}</div>
                     </td>
                     <td class="p-5">
-                        <div class="font-bold text-gray-800">${escapeHtml(v.company)}</div>
-                        <div class="text-[10px] uppercase font-black text-uae-gold">${escapeHtml(v.purpose)}</div>
+                        <div class="font-bold text-gray-800">${v.company}</div>
+                        <div class="text-[10px] uppercase font-black text-uae-gold">${v.purpose}</div>
                     </td>
                     <td class="p-5 text-center font-black">
                         <div class="text-blue-900">${v.checkIn}</div>
@@ -500,66 +494,58 @@
             `).join('');
         }
 
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
         function closeModal() { 
             document.getElementById('codeModal').style.display = 'none'; 
         }
 
         function clearDatabase() {
-            if(confirm("⚠ CONFIRM: Delete ALL confidential records? This action CANNOT be undone.")) {
+            if(confirm("DELETE ALL RECORDS?")) {
                 visitors = [];
                 saveToStorage();
-                showToast('Database cleared', 'info');
+                debug('Database cleared', 'warn');
             }
         }
 
         function exportToCSV() {
             if (visitors.length === 0) {
-                showToast('No records to export', 'info');
+                debug('No records to export', 'warn');
                 return;
             }
 
             let csv = "Name,Phone,ID,Email,Company,Purpose,Entry Time,Entry Date,Exit Time,Status,Security Code\n";
             visitors.forEach(v => {
-                csv += `"${v.name.replace(/"/g, '""')}","${v.phone}","${v.idNo}","${v.email}","${v.company}","${v.purpose}","${v.checkIn}","${v.date}","${v.checkOut || 'N/A'}","${v.status}","${v.code}"\n`;
+                csv += `"${v.name}","${v.phone}","${v.idNo}","${v.email}","${v.company}","${v.purpose}","${v.checkIn}","${v.date}","${v.checkOut || ''}","${v.status}","${v.code}"\n`;
             });
             
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
+            const blob = new Blob([csv], { type: 'text/csv' });
             const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Embassy_Logs_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
             
-            link.setAttribute('href', url);
-            link.setAttribute('download', `Embassy_Security_Logs_${new Date().toISOString().split('T')[0]}.csv`);
-            link.style.visibility = 'hidden';
-            
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            showToast('CSV exported successfully', 'success');
+            debug(`Exported ${visitors.length} records to CSV`, 'ok');
         }
 
         // ===== INITIALIZATION =====
         window.addEventListener('load', () => {
+            debug('===== APPLICATION STARTED =====', 'info');
+            
             loadFromStorage();
             renderLogs();
 
             const urlParams = new URLSearchParams(window.location.search);
             
-            // Check for admin access
+            // Admin access
             if (urlParams.get('admin') === 'true') {
                 document.getElementById('tab-admin').style.display = 'block';
-                showToast('Admin panel activated', 'info');
+                debug('✓ Admin panel ENABLED', 'ok');
             }
 
-            // Check for automatic checkout from email link
+            // Auto-checkout
             const checkoutCode = urlParams.get('checkout');
             if (checkoutCode) {
+                debug(`Auto-checkout triggered with code: ${checkoutCode}`, 'info');
                 const cleanCode = checkoutCode.trim().toUpperCase();
                 showPage('check-out');
                 
@@ -567,13 +553,12 @@
                     const inputField = document.getElementById('out_code');
                     if (inputField) {
                         inputField.value = cleanCode;
-                        inputField.focus();
-                        
-                        // Auto-process after a short delay for UX
-                        setTimeout(() => processCheckOut(cleanCode), 800);
+                        setTimeout(() => processCheckOut(cleanCode), 500);
                     }
                 }, 500);
             }
+
+            debug('Initialization complete', 'ok');
         });
     </script>
 </body>
