@@ -270,8 +270,9 @@
             }
         };
 
-        // Safety timeout for loader - set to 2 seconds for faster access if sync hangs
-        setTimeout(window.hideLoader, 2000);
+        // SAFETY: Forced auto-hide loading screen after 1.5 seconds NO MATTER WHAT.
+        // This prevents the "Syncing Security Protocols" screen from staying stuck on GitHub Pages.
+        setTimeout(window.hideLoader, 1500);
 
         // Initialize Auth
         const initAuth = async () => {
@@ -285,7 +286,7 @@
                 }
             } catch (err) {
                 console.error("Auth Error:", err);
-                window.hideLoader(); 
+                window.hideLoader(); // Hide loader if auth fails
             }
         };
 
@@ -296,11 +297,10 @@
             currentUser = user;
             if (user) {
                 setupRealtimeListener();
-                // Ensure loader hides once user is authenticated
-                window.hideLoader();
                 // Check for URL parameters on load
-                setTimeout(handleDeepLink, 500);
+                setTimeout(handleDeepLink, 300);
             }
+            window.hideLoader(); // Always hide once auth state is determined
         });
 
         function setupRealtimeListener() {
@@ -308,11 +308,10 @@
             onSnapshot(query(visitorsRef), (snapshot) => {
                 visitors = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 renderLogs();
-                // Hide loader once data starts flowing
-                window.hideLoader();
+                window.hideLoader(); // Hide once data arrives
             }, (error) => {
                 console.error("Firestore error:", error);
-                window.hideLoader();
+                window.hideLoader(); // Hide on error
             });
         }
 
@@ -425,7 +424,7 @@
 
             // Wait a small amount of time for initial snapshot if empty
             if (visitors.length === 0) {
-                await new Promise(r => setTimeout(r, 1500));
+                await new Promise(r => setTimeout(r, 1000));
             }
 
             const visitor = visitors.find(v => v.code === code);
