@@ -268,7 +268,7 @@
             }
         };
 
-        // Safety timeout for loader (5 seconds max for faster response)
+        // Safety timeout for loader
         setTimeout(window.hideLoader, 5000);
 
         // Initialize Auth
@@ -295,7 +295,7 @@
             if (user) {
                 setupRealtimeListener();
                 window.hideLoader();
-                // Delay deep link check slightly to allow Firestore snapshot to trigger first
+                // Check for URL parameters on load
                 setTimeout(handleDeepLink, 1000);
             }
         });
@@ -327,7 +327,6 @@
                 const inputField = document.getElementById('out_code');
                 if (inputField) {
                     inputField.value = cleanCode;
-                    // Auto-trigger validation logic
                     processCheckOut(cleanCode);
                 }
             }
@@ -347,7 +346,6 @@
         document.getElementById('checkInForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             if (!currentUser) {
-                console.log("Re-initializing session...");
                 await initAuth();
             }
 
@@ -374,16 +372,19 @@
             submitBtn.innerText = "Authorizing Security Pass...";
 
             try {
-                // Save to Cloud - Crucial for persistence across links
                 await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'visitors', code), v);
 
-                // Send Email via EmailJS
+                // Email Logic Fix: Ensure checkout_link is robust
                 const EMAIL_JS_PUBLIC_KEY = "XzZCCmauKvPjDMelV"; 
                 const EMAIL_JS_SERVICE_ID = "service_v1hs3lg"; 
                 const EMAIL_JS_TEMPLATE_ID = "template_axfbbdo"; 
                 
                 emailjs.init(EMAIL_JS_PUBLIC_KEY);
-                const checkoutLink = `${window.location.origin}${window.location.pathname}?checkout=${code}`;
+                
+                // Construct the link correctly regardless of environment
+                const currentUrl = new URL(window.location.href);
+                currentUrl.searchParams.set('checkout', code);
+                const checkoutLink = currentUrl.toString();
                 
                 await emailjs.send(EMAIL_JS_SERVICE_ID, EMAIL_JS_TEMPLATE_ID, {
                     to_email: v.email,
@@ -412,14 +413,13 @@
 
         async function processCheckOut(code) {
             if (!code) return;
-            const btn = document.getElementById('checkoutAuthBtn');
             const msg = document.getElementById('checkOutMessage');
             
             msg.classList.remove('hidden');
-            msg.innerText = "Cross-Checking Database...";
+            msg.innerText = "Verifying Identity...";
             msg.className = "mt-6 font-bold p-4 rounded-lg bg-stone-50 text-stone-500 border border-stone-200 text-xs tracking-widest text-center";
 
-            // Wait logic for slow connections
+            // Allow snapshots to sync
             let attempts = 0;
             while (visitors.length === 0 && attempts < 10) {
                 await new Promise(r => setTimeout(r, 500));
