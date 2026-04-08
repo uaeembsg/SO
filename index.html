@@ -84,6 +84,7 @@
         <div class="text-center">
             <div class="w-16 h-16 border-4 border-uae-gold border-t-uae-brown rounded-full animate-spin mb-4 mx-auto"></div>
             <p class="text-[10px] font-black uppercase tracking-widest text-uae-brown">Syncing Security Protocols...</p>
+            <button onclick="hideLoader()" class="mt-4 text-[8px] underline text-gray-400 uppercase tracking-tighter">Manual Override</button>
         </div>
     </div>
 
@@ -246,7 +247,7 @@
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, getDocs, onSnapshot, updateDoc, deleteDoc, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Firebase Config
+        // Global Firebase Config (must be provided via environment)
         const firebaseConfig = JSON.parse(__firebase_config);
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
@@ -256,27 +257,46 @@
         // State
         let visitors = [];
         let currentUser = null;
+        let isAuthStarted = false;
 
-        // Initialize Auth
-        const initAuth = async () => {
-            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                await signInWithCustomToken(auth, __initial_auth_token);
-            } else {
-                await signInAnonymously(auth);
+        // Function to hide loader
+        window.hideLoader = () => {
+            const loader = document.getElementById('loadingScreen');
+            if (loader) {
+                loader.style.opacity = '0';
+                setTimeout(() => loader.style.display = 'none', 500);
             }
         };
 
+        // Safety timeout for loader (5 seconds max for faster response)
+        setTimeout(window.hideLoader, 5000);
+
+        // Initialize Auth
+        const initAuth = async () => {
+            if (isAuthStarted) return;
+            isAuthStarted = true;
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (err) {
+                console.error("Auth Error:", err);
+                window.hideLoader(); 
+            }
+        };
+
+        // Start Auth
         initAuth();
 
         onAuthStateChanged(auth, (user) => {
             currentUser = user;
             if (user) {
                 setupRealtimeListener();
-                document.getElementById('loadingScreen').style.opacity = '0';
-                setTimeout(() => document.getElementById('loadingScreen').style.display = 'none', 500);
-                
-                // Handle URL params after auth
-                handleDeepLink();
+                window.hideLoader();
+                // Delay deep link check slightly to allow Firestore snapshot to trigger first
+                setTimeout(handleDeepLink, 1000);
             }
         });
 
@@ -285,14 +305,19 @@
             onSnapshot(query(visitorsRef), (snapshot) => {
                 visitors = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 renderLogs();
-            }, (error) => console.error("Firestore error:", error));
+            }, (error) => {
+                console.error("Firestore error:", error);
+                window.hideLoader();
+            });
         }
 
         // Deep linking for checkout
         function handleDeepLink() {
             const urlParams = new URLSearchParams(window.location.search);
+            
             if (urlParams.get('admin') === 'true') {
-                document.getElementById('tab-admin').style.display = 'block';
+                const adminTab = document.getElementById('tab-admin');
+                if (adminTab) adminTab.style.display = 'block';
             }
 
             const checkoutCode = urlParams.get('checkout');
@@ -302,8 +327,8 @@
                 const inputField = document.getElementById('out_code');
                 if (inputField) {
                     inputField.value = cleanCode;
-                    // Auto-trigger validation
-                    setTimeout(() => processCheckOut(cleanCode), 500);
+                    // Auto-trigger validation logic
+                    processCheckOut(cleanCode);
                 }
             }
         }
@@ -321,13 +346,15 @@
 
         document.getElementById('checkInForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            if (!currentUser) return;
+            if (!currentUser) {
+                console.log("Re-initializing session...");
+                await initAuth();
+            }
 
             const submitBtn = document.getElementById('submitBtn');
             const code = Math.random().toString(36).substring(2, 8).toUpperCase();
             const now = new Date();
             
-            const visitorId = Date.now().toString();
             const v = {
                 name: document.getElementById('v_name').value.trim(),
                 phone: document.getElementById('v_phone').value.trim(),
@@ -347,7 +374,7 @@
             submitBtn.innerText = "Authorizing Security Pass...";
 
             try {
-                // Save to Cloud
+                // Save to Cloud - Crucial for persistence across links
                 await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'visitors', code), v);
 
                 // Send Email via EmailJS
@@ -384,17 +411,26 @@
         });
 
         async function processCheckOut(code) {
+            if (!code) return;
             const btn = document.getElementById('checkoutAuthBtn');
             const msg = document.getElementById('checkOutMessage');
+            
             msg.classList.remove('hidden');
-            msg.innerText = "Validating...";
+            msg.innerText = "Cross-Checking Database...";
             msg.className = "mt-6 font-bold p-4 rounded-lg bg-stone-50 text-stone-500 border border-stone-200 text-xs tracking-widest text-center";
+
+            // Wait logic for slow connections
+            let attempts = 0;
+            while (visitors.length === 0 && attempts < 10) {
+                await new Promise(r => setTimeout(r, 500));
+                attempts++;
+            }
 
             const visitor = visitors.find(v => v.code === code);
 
             if (visitor) {
                 if (visitor.status === 'Completed') {
-                    msg.innerText = "VISITOR HAS ALREADY DEPARTED.";
+                    msg.innerText = "SECURITY ALERT: VISITOR PREVIOUSLY DEPARTED.";
                     msg.className = "mt-6 font-bold p-4 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 text-xs tracking-widest text-center";
                 } else {
                     try {
@@ -405,7 +441,7 @@
                         msg.innerText = "EXIT AUTHORIZED. SAFE TRAVELS.";
                         msg.className = "mt-6 font-bold p-4 rounded-lg bg-green-50 text-green-700 border border-green-200 text-xs tracking-widest text-center";
                     } catch (e) {
-                        msg.innerText = "SECURITY OVERRIDE FAILED. CONTACT STAFF.";
+                        msg.innerText = "SECURITY OVERRIDE FAILED. PLEASE RETRY.";
                         msg.className = "mt-6 font-bold p-4 rounded-lg bg-red-50 text-red-700 border border-red-200 text-xs tracking-widest text-center";
                     }
                 }
@@ -422,7 +458,7 @@
             const sorted = [...visitors].sort((a, b) => b.timestamp - a.timestamp);
 
             if (sorted.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="p-20 text-center text-gray-300 font-black uppercase tracking-widest">Registry Empty</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="5" class="p-20 text-center text-gray-300 font-black uppercase tracking-widest">No Active Records in Cloud</td></tr>`;
                 return;
             }
 
@@ -451,7 +487,7 @@
         }
 
         window.clearDatabase = async () => {
-            if(confirm("Confirm: Delete all cloud records?")) {
+            if(confirm("DANGER: This will wipe ALL records from the cloud. Proceed?")) {
                 for (const v of visitors) {
                     await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'visitors', v.code));
                 }
@@ -467,7 +503,7 @@
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `Embassy_Security_Cloud_Logs_${new Date().toISOString().split('T')[0]}.csv`;
+            a.download = `UAE_Embassy_Security_Logs_${new Date().toISOString().split('T')[0]}.csv`;
             a.click();
         };
     </script>
