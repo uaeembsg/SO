@@ -264,12 +264,14 @@
             const loader = document.getElementById('loadingScreen');
             if (loader) {
                 loader.style.opacity = '0';
-                setTimeout(() => loader.style.display = 'none', 500);
+                setTimeout(() => {
+                    loader.style.display = 'none';
+                }, 500);
             }
         };
 
-        // Safety timeout for loader
-        setTimeout(window.hideLoader, 5000);
+        // Safety timeout for loader - set to 2 seconds for faster access if sync hangs
+        setTimeout(window.hideLoader, 2000);
 
         // Initialize Auth
         const initAuth = async () => {
@@ -294,9 +296,10 @@
             currentUser = user;
             if (user) {
                 setupRealtimeListener();
+                // Ensure loader hides once user is authenticated
                 window.hideLoader();
                 // Check for URL parameters on load
-                setTimeout(handleDeepLink, 1000);
+                setTimeout(handleDeepLink, 500);
             }
         });
 
@@ -305,6 +308,8 @@
             onSnapshot(query(visitorsRef), (snapshot) => {
                 visitors = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 renderLogs();
+                // Hide loader once data starts flowing
+                window.hideLoader();
             }, (error) => {
                 console.error("Firestore error:", error);
                 window.hideLoader();
@@ -374,7 +379,6 @@
             try {
                 await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'visitors', code), v);
 
-                // Email Logic Fix: Ensure checkout_link is robust
                 const EMAIL_JS_PUBLIC_KEY = "XzZCCmauKvPjDMelV"; 
                 const EMAIL_JS_SERVICE_ID = "service_v1hs3lg"; 
                 const EMAIL_JS_TEMPLATE_ID = "template_axfbbdo"; 
@@ -419,11 +423,9 @@
             msg.innerText = "Verifying Identity...";
             msg.className = "mt-6 font-bold p-4 rounded-lg bg-stone-50 text-stone-500 border border-stone-200 text-xs tracking-widest text-center";
 
-            // Allow snapshots to sync
-            let attempts = 0;
-            while (visitors.length === 0 && attempts < 10) {
-                await new Promise(r => setTimeout(r, 500));
-                attempts++;
+            // Wait a small amount of time for initial snapshot if empty
+            if (visitors.length === 0) {
+                await new Promise(r => setTimeout(r, 1500));
             }
 
             const visitor = visitors.find(v => v.code === code);
