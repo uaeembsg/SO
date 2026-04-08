@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>UAE Embassy Visitor Management System</title>
+    <!-- Tailwind CSS for modern styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root {
@@ -48,7 +49,7 @@
 
         input:focus, select:focus {
             border-color: var(--uae-brown) !important;
-            ring-color: var(--uae-brown) !important;
+            outline: none !important;
         }
 
         #tab-admin { display: none; }
@@ -96,31 +97,31 @@
                 <form id="checkInForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     <div>
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Full Name</label>
-                        <input type="text" id="v_name" name="name" required class="w-full border-gray-200 border p-3 rounded focus:outline-none transition-all" placeholder="As per ID">
+                        <input type="text" id="v_name" name="name" required class="w-full border-gray-200 border p-3 rounded transition-all" placeholder="As per ID">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-1">ID / Passport No.</label>
-                        <input type="text" id="v_id" name="idNo" required class="w-full border-gray-200 border p-3 rounded focus:outline-none transition-all" placeholder="NRIC / Passport">
+                        <input type="text" id="v_id" name="idNo" required class="w-full border-gray-200 border p-3 rounded transition-all" placeholder="NRIC / Passport">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nationality</label>
-                        <input type="text" id="v_nationality" name="nationality" required class="w-full border-gray-200 border p-3 rounded focus:outline-none transition-all" placeholder="e.g. Emirati">
+                        <input type="text" id="v_nationality" name="nationality" required class="w-full border-gray-200 border p-3 rounded transition-all" placeholder="e.g. Emirati">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Contact No.</label>
-                        <input type="tel" id="v_contact" name="contact" required class="w-full border-gray-200 border p-3 rounded focus:outline-none transition-all" placeholder="+971 ...">
+                        <input type="tel" id="v_contact" name="contact" required class="w-full border-gray-200 border p-3 rounded transition-all" placeholder="+971 ...">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Email Address</label>
-                        <input type="email" id="v_email" name="email" required class="w-full border-gray-200 border p-3 rounded focus:outline-none transition-all" placeholder="For security codes">
+                        <input type="email" id="v_email" name="email" required class="w-full border-gray-200 border p-3 rounded transition-all" placeholder="For security codes">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Company / Organization</label>
-                        <input type="text" id="v_company" name="company" required class="w-full border-gray-200 border p-3 rounded focus:outline-none transition-all" placeholder="Employer Name">
+                        <input type="text" id="v_company" name="company" required class="w-full border-gray-200 border p-3 rounded transition-all" placeholder="Employer Name">
                     </div>
                     <div class="lg:col-span-3">
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Purpose of Visit</label>
-                        <select id="v_purpose" name="purpose" required class="w-full border-gray-200 border p-3 rounded focus:outline-none transition-all bg-white">
+                        <select id="v_purpose" name="purpose" required class="w-full border-gray-200 border p-3 rounded bg-white">
                             <option value="">Select Purpose</option>
                             <option value="Consulate">Consulate</option>
                             <option value="Meeting">Meeting</option>
@@ -144,7 +145,7 @@
                 <h2 class="text-2xl font-bold text-uae-brown-dark mb-4">Visitor Check-Out</h2>
                 <p class="text-sm text-gray-500 mb-8 leading-relaxed font-medium">Enter the secure code from your email to finalize your departure.</p>
                 <form id="checkOutForm" class="space-y-6">
-                    <input type="text" id="out_code" required class="w-full text-center text-3xl tracking-[1rem] border-uae-gold border-2 p-5 rounded-lg focus:ring-uae-brown outline-none uppercase font-mono bg-stone-50" placeholder="XXXXXX">
+                    <input type="text" id="out_code" required class="w-full text-center text-3xl tracking-[1rem] border-uae-gold border-2 p-5 rounded-lg outline-none uppercase font-mono bg-stone-50" placeholder="XXXXXX">
                     <button type="submit" class="w-full bg-uae-dark text-white font-bold py-4 rounded hover:bg-black transition-all uppercase tracking-widest">
                         Verify & Check-Out
                     </button>
