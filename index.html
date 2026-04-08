@@ -1,312 +1,356 @@
-import React, { useState, useEffect } from 'react';
-import { initializeApp } from 'firebase/app';
-import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
-import { getFirestore, collection, doc, setDoc, onSnapshot, query, updateDoc } from 'firebase/firestore';
-
-// --- CONFIGURATION ---
-const firebaseConfig = JSON.parse(__firebase_config);
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'uae-embassy-vms';
-
-export default function App() {
-  const [user, setUser] = useState(null);
-  const [activeTab, setActiveTab] = useState('check-in');
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [visitors, setVisitors] = useState([]);
-  const [showModal, setShowModal] = useState(false);
-  const [latestCode, setLatestCode] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [outCode, setOutCode] = useState('');
-  const [outMessage, setOutMessage] = useState({ text: '', type: '' });
-
-  // 1. Auth Initialization
-  useEffect(() => {
-    const initAuth = async () => {
-      try {
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-          await signInWithCustomToken(auth, __initial_auth_token);
-        } else {
-          await signInAnonymously(auth);
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UAE Embassy Visitor Management System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --uae-brown: #5D4037;
+            --uae-brown-dark: #3E2723;
+            --uae-gold: #C49A6C;
+            --uae-gold-light: #E0C9A6;
+            --uae-dark: #1A1A1A;
+            --uae-bg: #FDFBFA;
         }
-      } catch (err) {
-        console.error("Auth Error:", err);
-      }
-    };
-    initAuth();
-    const unsubscribe = onAuthStateChanged(auth, setUser);
-    return () => unsubscribe();
-  }, []);
+        body {
+            background-color: var(--uae-bg);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .bg-uae-brown { background-color: var(--uae-brown); }
+        .text-uae-brown { color: var(--uae-brown); }
+        .border-uae-gold { border-color: var(--uae-gold); }
+        .bg-uae-gold { background-color: var(--uae-gold); }
+        
+        .card {
+            background: white;
+            border-top: 4px solid var(--uae-brown);
+            box-shadow: 0 4px 20px rgba(93, 64, 55, 0.08);
+        }
+        
+        .nav-tab.active {
+            border-bottom: 3px solid var(--uae-gold);
+            color: var(--uae-brown);
+            font-weight: 600;
+        }
 
-  // 2. Admin Check & Data Subscription
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('admin') === 'true') setIsAdmin(true);
+        #codeModal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(26, 26, 26, 0.85);
+            z-index: 50;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+        }
 
-    const checkoutParam = urlParams.get('checkout');
-    if (checkoutParam) {
-      setActiveTab('check-out');
-      setOutCode(checkoutParam.toUpperCase());
-    }
+        input:focus, select:focus {
+            border-color: var(--uae-brown) !important;
+            ring-color: var(--uae-brown) !important;
+        }
 
-    if (!user) return;
+        #tab-admin { display: none; }
 
-    // Real-time listener for public visitor data
-    const q = collection(db, 'artifacts', appId, 'public', 'data', 'visitors');
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      // Sort by timestamp descending (newest first)
-      docs.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-      setVisitors(docs);
-    }, (err) => console.error("Firestore Error:", err));
+        @keyframes highlight-new {
+            0% { background-color: #FFFBEB; }
+            100% { background-color: transparent; }
+        }
+        .new-entry-row {
+            animation: highlight-new 3s ease-out;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
 
-    return () => unsubscribe();
-  }, [user]);
-
-  // 3. Handlers
-  const handleCheckIn = async (e) => {
-    e.preventDefault();
-    if (!user) return;
-
-    const formData = new FormData(e.target);
-    const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-    const visitorData = {
-      name: formData.get('name'),
-      idNo: formData.get('idNo'),
-      nationality: formData.get('nationality'),
-      contact: formData.get('contact'),
-      email: formData.get('email'),
-      company: formData.get('company'),
-      purpose: formData.get('purpose'),
-      checkIn: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      date: new Date().toLocaleDateString('en-GB'),
-      timestamp: Date.now(),
-      status: 'Active',
-      code: code,
-      checkOut: null
-    };
-
-    try {
-      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'visitors', code), visitorData);
-      setLatestCode(code);
-      setShowModal(true);
-      e.target.reset();
-      
-      // Log "Email" to console for testing
-      console.log(`%c [SECURE EMAIL SENT TO ${visitorData.email}]`, 'background: #5D4037; color: #fff; font-weight: bold;');
-      console.log(`Welcome ${visitorData.name}. Your Security Code is ${code}. Checkout: ${window.location.origin}${window.location.pathname}?checkout=${code}`);
-    } catch (err) {
-      console.error("Save Error:", err);
-    }
-  };
-
-  const handleCheckOut = async (e) => {
-    e.preventDefault();
-    if (!user) return;
-
-    const visitor = visitors.find(v => v.code === outCode.toUpperCase() && v.status === 'Active');
-    if (visitor) {
-      try {
-        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'visitors', visitor.code), {
-          status: 'Completed',
-          checkOut: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        });
-        setOutMessage({ text: 'SUCCESS: VISIT TERMINATED.', type: 'success' });
-        setOutCode('');
-      } catch (err) {
-        setOutMessage({ text: 'ERROR SAVING DATA.', type: 'error' });
-      }
-    } else {
-      setOutMessage({ text: 'ERROR: CODE NOT FOUND OR ALREADY TERMINATED.', type: 'error' });
-    }
-  };
-
-  const filteredVisitors = visitors.filter(v => 
-    v.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    v.idNo?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    v.company?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  return (
-    <div className="min-h-screen bg-[#FDFBFA] font-sans text-gray-800">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-30">
-        <div className="max-w-[95%] mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center">
-          <div className="flex items-center space-x-4">
-            <div className="w-16 h-16 bg-[#5D4037] flex items-center justify-center rounded-sm shadow-inner">
-              <span className="text-white text-[10px] text-center font-bold px-1 uppercase">Embassy Logo</span>
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b border-gray-100">
+        <div class="max-w-[95%] mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center">
+            <div class="flex items-center space-x-4">
+                <div class="w-16 h-16 bg-uae-brown flex items-center justify-center rounded-sm shadow-inner">
+                    <span class="text-white text-[10px] text-center font-bold px-1 uppercase">Embassy Logo</span>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-uae-brown uppercase tracking-widest">United Arab Emirates</h1>
+                    <p class="text-xs text-gray-500 font-semibold uppercase tracking-tighter">Embassy Visitor Security Portal</p>
+                </div>
             </div>
-            <div>
-              <h1 className="text-xl font-bold text-[#5D4037] uppercase tracking-widest">United Arab Emirates</h1>
-              <p className="text-xs text-gray-500 font-semibold uppercase tracking-tighter">Embassy Visitor Security Portal</p>
+            <div class="mt-4 md:mt-0 flex space-x-8 text-xs font-bold tracking-widest">
+                <button onclick="showPage('check-in')" id="tab-check-in" class="nav-tab active py-2 transition-all">CHECK-IN</button>
+                <button onclick="showPage('check-out')" id="tab-check-out" class="nav-tab py-2 transition-all">CHECK-OUT</button>
+                <button onclick="showPage('admin')" id="tab-admin" class="nav-tab py-2 transition-all border-l pl-8 border-gray-200">SECURITY ADMIN</button>
             </div>
-          </div>
-          <div className="mt-4 md:mt-0 flex space-x-8 text-xs font-bold tracking-widest">
-            <button onClick={() => setActiveTab('check-in')} className={`py-2 transition-all ${activeTab === 'check-in' ? 'border-b-2 border-[#C49A6C] text-[#5D4037]' : 'text-gray-400'}`}>CHECK-IN</button>
-            <button onClick={() => setActiveTab('check-out')} className={`py-2 transition-all ${activeTab === 'check-out' ? 'border-b-2 border-[#C49A6C] text-[#5D4037]' : 'text-gray-400'}`}>CHECK-OUT</button>
-            {isAdmin && (
-              <button onClick={() => setActiveTab('admin')} className={`py-2 border-l pl-8 border-gray-200 transition-all ${activeTab === 'admin' ? 'border-b-2 border-[#C49A6C] text-[#5D4037]' : 'text-gray-400'}`}>SECURITY ADMIN</button>
-            )}
-          </div>
         </div>
-      </header>
+    </header>
 
-      <main className="mx-auto p-6">
-        {/* Check-In Page */}
-        {activeTab === 'check-in' && (
-          <div className="max-w-4xl mx-auto bg-white p-8 rounded shadow-lg border-t-4 border-[#5D4037]">
-            <h2 className="text-2xl font-bold mb-6 text-[#5D4037] flex items-center gap-2">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-              Visitor Registration
-            </h2>
-            <form onSubmit={handleCheckIn} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[
-                { label: 'Full Name', name: 'name', type: 'text', placeholder: 'As per ID' },
-                { label: 'ID / Passport No.', name: 'idNo', type: 'text', placeholder: 'NRIC / Passport' },
-                { label: 'Nationality', name: 'nationality', type: 'text', placeholder: 'e.g. Emirati' },
-                { label: 'Contact No.', name: 'contact', type: 'tel', placeholder: '+971 ...' },
-                { label: 'Email Address', name: 'email', type: 'email', placeholder: 'For security codes' },
-                { label: 'Company', name: 'company', type: 'text', placeholder: 'Organization Name' },
-              ].map(field => (
-                <div key={field.name}>
-                  <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">{field.label}</label>
-                  <input name={field.name} required type={field.type} className="w-full border-gray-200 border p-3 rounded text-sm focus:border-[#5D4037] outline-none" placeholder={field.placeholder} />
+    <main class="mx-auto p-6 mt-4">
+        
+        <!-- Registration Page -->
+        <section id="page-check-in" class="page max-w-4xl mx-auto">
+            <div class="card p-8 rounded-lg">
+                <div class="flex items-center space-x-3 mb-6 border-b pb-4 text-uae-brown">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                    <h2 class="text-2xl font-bold">Visitor Registration</h2>
                 </div>
-              ))}
-              <div className="lg:col-span-3">
-                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Purpose of Visit</label>
-                <select name="purpose" required className="w-full border-gray-200 border p-3 rounded text-sm bg-white">
-                  <option value="">Select Purpose</option>
-                  <option value="Consulate">Consulate</option>
-                  <option value="Meeting">Meeting</option>
-                  <option value="Suppliers">Suppliers</option>
-                  <option value="UAE Citizen">UAE Citizen</option>
-                  <option value="Police PROCOM">Police PROCOM</option>
-                </select>
-              </div>
-              <button type="submit" className="lg:col-span-3 bg-[#5D4037] text-white font-bold py-4 rounded hover:bg-[#3E2723] transition-all uppercase tracking-widest mt-4">
-                Submit Registration
-              </button>
-            </form>
-          </div>
-        )}
-
-        {/* Check-Out Page */}
-        {activeTab === 'check-out' && (
-          <div className="max-w-md mx-auto bg-white p-10 rounded shadow-lg text-center border-t-4 border-[#5D4037]">
-            <h2 className="text-2xl font-bold text-[#5D4037] mb-4">Visitor Check-Out</h2>
-            <p className="text-sm text-gray-500 mb-8">Enter the secure code from your email to finalize your departure.</p>
-            <form onSubmit={handleCheckOut} className="space-y-6">
-              <input 
-                value={outCode}
-                onChange={(e) => setOutCode(e.target.value)}
-                required 
-                className="w-full text-center text-3xl tracking-[1rem] border-[#C49A6C] border-2 p-5 rounded-lg uppercase font-mono bg-stone-50" 
-                placeholder="XXXXXX" 
-              />
-              <button type="submit" className="w-full bg-[#1A1A1A] text-white font-bold py-4 rounded hover:bg-black uppercase tracking-widest">
-                Verify & Check-Out
-              </button>
-            </form>
-            {outMessage.text && (
-              <div className={`mt-6 font-bold p-3 rounded border ${outMessage.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-                {outMessage.text}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Admin Page */}
-        {activeTab === 'admin' && isAdmin && (
-          <div className="flex flex-col lg:flex-row gap-6">
-            <div className="flex-[3]">
-              <div className="bg-white p-6 rounded shadow border-t-4 border-[#5D4037]">
-                <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
-                  <div>
-                    <h2 className="text-xl font-bold text-[#3E2723]">Live Security Database</h2>
-                    <p className="text-[10px] uppercase text-gray-400 font-bold">Total Visitors: {visitors.length}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <input 
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="border border-gray-200 p-2 rounded text-sm w-64" 
-                      placeholder="Search records..." 
-                    />
-                  </div>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse min-w-[1000px]">
-                    <thead className="bg-stone-50 text-[10px] uppercase font-bold text-[#5D4037] border-b">
-                      <tr>
-                        <th className="p-4">Visitor Name</th>
-                        <th className="p-4">Passport / ID</th>
-                        <th className="p-4">Company</th>
-                        <th className="p-4">Purpose</th>
-                        <th className="p-4">Check-In</th>
-                        <th className="p-4">Check-Out</th>
-                        <th className="p-4 text-center">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="text-xs text-gray-700">
-                      {filteredVisitors.map(v => (
-                        <tr key={v.id} className="border-b hover:bg-stone-50 transition-colors">
-                          <td className="p-4 font-bold text-[#3E2723] uppercase">{v.name}</td>
-                          <td className="p-4 font-mono text-gray-500">{v.idNo}</td>
-                          <td className="p-4">{v.company}</td>
-                          <td className="p-4"><span className="px-2 py-1 bg-stone-100 rounded">{v.purpose}</span></td>
-                          <td className="p-4 text-blue-800 font-bold">{v.checkIn}</td>
-                          <td className="p-4 text-amber-800 font-bold">{v.checkOut || '---'}</td>
-                          <td className="p-4 text-center">
-                            <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase ${v.status === 'Active' ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-400'}`}>
-                              {v.status}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-            {/* Live Feed */}
-            <div className="flex-1">
-              <div className="bg-white p-6 rounded shadow border-t-4 border-[#C49A6C]">
-                <h3 className="font-bold text-[#5D4037] text-sm uppercase mb-4 border-b pb-2 flex justify-between">
-                  Live Feed <span className="animate-pulse bg-red-500 w-2 h-2 rounded-full inline-block"></span>
-                </h3>
-                <div className="space-y-4">
-                  {visitors.slice(0, 5).map(v => (
-                    <div key={v.id} className="p-3 border-l-4 border-[#C49A6C] bg-stone-50 rounded text-[10px]">
-                      <div className="flex justify-between font-black mb-1 uppercase text-[#5D4037]">
-                        <span>{v.name}</span>
-                        <span className="text-gray-400">{v.checkIn}</span>
-                      </div>
-                      <div className="text-gray-600">{v.company} • {v.purpose}</div>
+                <form id="checkInForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Full Name</label>
+                        <input type="text" id="v_name" name="name" required class="w-full border-gray-200 border p-3 rounded focus:outline-none transition-all" placeholder="As per ID">
                     </div>
-                  ))}
-                </div>
-              </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">ID / Passport No.</label>
+                        <input type="text" id="v_id" name="idNo" required class="w-full border-gray-200 border p-3 rounded focus:outline-none transition-all" placeholder="NRIC / Passport">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nationality</label>
+                        <input type="text" id="v_nationality" name="nationality" required class="w-full border-gray-200 border p-3 rounded focus:outline-none transition-all" placeholder="e.g. Emirati">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Contact No.</label>
+                        <input type="tel" id="v_contact" name="contact" required class="w-full border-gray-200 border p-3 rounded focus:outline-none transition-all" placeholder="+971 ...">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Email Address</label>
+                        <input type="email" id="v_email" name="email" required class="w-full border-gray-200 border p-3 rounded focus:outline-none transition-all" placeholder="For security codes">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Company / Organization</label>
+                        <input type="text" id="v_company" name="company" required class="w-full border-gray-200 border p-3 rounded focus:outline-none transition-all" placeholder="Employer Name">
+                    </div>
+                    <div class="lg:col-span-3">
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Purpose of Visit</label>
+                        <select id="v_purpose" name="purpose" required class="w-full border-gray-200 border p-3 rounded focus:outline-none transition-all bg-white">
+                            <option value="">Select Purpose</option>
+                            <option value="Consulate">Consulate</option>
+                            <option value="Meeting">Meeting</option>
+                            <option value="Suppliers">Suppliers</option>
+                            <option value="UAE Citizen">UAE Citizen</option>
+                            <option value="Police PROCOM">Police PROCOM</option>
+                        </select>
+                    </div>
+                    <div class="lg:col-span-3 mt-4">
+                        <button type="submit" class="w-full bg-uae-brown text-white font-bold py-4 rounded hover:bg-uae-brown-dark transition-all uppercase tracking-widest shadow-lg active:scale-[0.99]">
+                            Submit Registration
+                        </button>
+                    </div>
+                </form>
             </div>
-          </div>
-        )}
-      </main>
+        </section>
 
-      {/* Code Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white p-10 rounded shadow-2xl max-w-sm w-full text-center border-t-8 border-[#C49A6C]">
-            <div className="text-[#C49A6C] mb-4">
-              <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+        <!-- Check-Out Page -->
+        <section id="page-check-out" class="page hidden max-w-md mx-auto">
+            <div class="card p-10 rounded-lg text-center">
+                <h2 class="text-2xl font-bold text-uae-brown-dark mb-4">Visitor Check-Out</h2>
+                <p class="text-sm text-gray-500 mb-8 leading-relaxed font-medium">Enter the secure code from your email to finalize your departure.</p>
+                <form id="checkOutForm" class="space-y-6">
+                    <input type="text" id="out_code" required class="w-full text-center text-3xl tracking-[1rem] border-uae-gold border-2 p-5 rounded-lg focus:ring-uae-brown outline-none uppercase font-mono bg-stone-50" placeholder="XXXXXX">
+                    <button type="submit" class="w-full bg-uae-dark text-white font-bold py-4 rounded hover:bg-black transition-all uppercase tracking-widest">
+                        Verify & Check-Out
+                    </button>
+                </form>
+                <div id="checkOutMessage" class="mt-6 hidden font-bold p-3 rounded border"></div>
             </div>
-            <h3 className="text-xl font-bold uppercase tracking-tight mb-2">Security Clear</h3>
-            <p className="text-xs text-gray-500 mb-6">Email and check-out link recorded.</p>
-            <div className="text-[9px] font-black text-gray-400 mb-1 uppercase">Digital Pass Code</div>
-            <div className="text-4xl font-mono font-black text-[#5D4037] border-2 border-[#C49A6C] p-5 rounded bg-stone-50 mb-8">{latestCode}</div>
-            <button onClick={() => setShowModal(false)} className="w-full bg-[#5D4037] text-white py-3 rounded font-bold uppercase tracking-widest">Dismiss</button>
-          </div>
+        </section>
+
+        <!-- Admin Dashboard -->
+        <section id="page-admin" class="page hidden px-4">
+            <div class="flex flex-col lg:flex-row gap-6">
+                <div class="flex-[3]">
+                    <div class="card p-6 rounded-lg mb-6">
+                        <div class="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
+                            <div>
+                                <h2 class="text-xl font-bold text-uae-brown-dark">Live Security Database</h2>
+                                <p class="text-[10px] uppercase tracking-tighter text-gray-400 font-bold">Total Visitors Logged: <span id="stats-total">0</span></p>
+                            </div>
+                            <div class="flex gap-2">
+                                <input type="text" id="search_query" oninput="handleSearch()" class="border border-gray-200 p-2 rounded text-sm focus:outline-none" placeholder="Search...">
+                                <button onclick="exportToCSV()" class="bg-emerald-700 text-white px-4 py-2 rounded text-xs font-bold">Excel</button>
+                            </div>
+                        </div>
+
+                        <div class="overflow-x-auto rounded border border-gray-100">
+                            <table class="w-full text-left border-collapse min-w-[1000px]">
+                                <thead class="bg-stone-50 text-[10px] uppercase font-bold text-uae-brown border-b border-gray-200">
+                                    <tr>
+                                        <th class="p-4">Visitor Name</th>
+                                        <th class="p-4">Passport / ID</th>
+                                        <th class="p-4">Company</th>
+                                        <th class="p-4">Purpose</th>
+                                        <th class="p-4">Check-In</th>
+                                        <th class="p-4">Check-Out</th>
+                                        <th class="p-4 text-center">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="visitorLogs" class="text-xs text-gray-700">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Feed Sidebar -->
+                <div class="flex-1 min-w-[300px]">
+                    <div class="card p-6 rounded-lg border-t-uae-gold">
+                        <h3 class="font-bold text-uae-brown text-sm uppercase tracking-wider mb-4 border-b pb-2 flex justify-between">
+                            Live Entry Feed <span class="animate-pulse bg-red-500 w-2 h-2 rounded-full inline-block"></span>
+                        </h3>
+                        <div id="live-feed" class="space-y-4 max-h-[600px] overflow-y-auto pr-2">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Modal -->
+    <div id="codeModal">
+        <div class="bg-white p-10 rounded-lg max-w-sm w-full mx-4 text-center border-t-8 border-uae-gold shadow-2xl">
+            <div class="text-uae-gold mb-4">
+                <svg class="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+            </div>
+            <h3 class="text-xl font-bold text-uae-brown-dark mb-2 uppercase tracking-tight">Security Clear</h3>
+            <p class="text-xs text-gray-500 mb-6 font-medium">Email and check-out link sent.</p>
+            <div class="text-[9px] font-black text-gray-400 mb-1 uppercase tracking-widest">Digital Pass Code</div>
+            <div id="displayCode" class="text-4xl font-mono font-black tracking-widest text-uae-brown border-2 border-uae-gold p-5 rounded-lg mb-8 bg-stone-50">XXXXXX</div>
+            <button onclick="closeModal()" class="w-full bg-uae-brown text-white py-3 rounded font-bold uppercase tracking-widest">Dismiss</button>
         </div>
-      )}
     </div>
-  );
-}
+
+    <script>
+        let visitors = [];
+
+        // Check URL for Admin or Auto-Checkout
+        window.onload = () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('admin') === 'true') {
+                document.getElementById('tab-admin').style.display = 'block';
+            }
+            const checkoutCode = urlParams.get('checkout');
+            if (checkoutCode) {
+                showPage('check-out');
+                document.getElementById('out_code').value = checkoutCode.toUpperCase();
+                processCheckOut(checkoutCode.toUpperCase());
+            }
+            renderLogs();
+            updateLiveFeed();
+        };
+
+        function showPage(pageId) {
+            document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+            document.getElementById('page-' + pageId).classList.remove('hidden');
+            const tab = document.getElementById('tab-' + pageId);
+            if (tab) tab.classList.add('active');
+        }
+
+        document.getElementById('checkInForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+            const now = new Date();
+            
+            const v = {
+                name: document.getElementById('v_name').value,
+                idNo: document.getElementById('v_id').value,
+                nationality: document.getElementById('v_nationality').value,
+                contact: document.getElementById('v_contact').value,
+                email: document.getElementById('v_email').value,
+                company: document.getElementById('v_company').value,
+                purpose: document.getElementById('v_purpose').value,
+                checkIn: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                date: now.toLocaleDateString('en-GB'),
+                code: code,
+                status: 'Active',
+                checkOut: null
+            };
+
+            visitors.unshift(v);
+            document.getElementById('displayCode').innerText = code;
+            document.getElementById('codeModal').style.display = 'flex';
+            
+            // Simulation log
+            console.log(`SECURE EMAIL TO ${v.email}: Code ${code}. Link: ${window.location.origin}${window.location.pathname}?checkout=${code}`);
+            
+            e.target.reset();
+            renderLogs();
+            updateLiveFeed();
+        });
+
+        document.getElementById('checkOutForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            processCheckOut(document.getElementById('out_code').value.toUpperCase());
+        });
+
+        function processCheckOut(code) {
+            const idx = visitors.findIndex(v => v.code === code && v.status === 'Active');
+            const msg = document.getElementById('checkOutMessage');
+            msg.classList.remove('hidden');
+
+            if (idx !== -1) {
+                visitors[idx].status = 'Completed';
+                visitors[idx].checkOut = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                msg.innerText = "SUCCESS: VISIT TERMINATED.";
+                msg.className = "mt-6 font-bold p-3 rounded border bg-green-50 text-green-700 border-green-200";
+                renderLogs();
+                updateLiveFeed();
+            } else {
+                msg.innerText = "ERROR: INVALID OR EXPIRED CODE.";
+                msg.className = "mt-6 font-bold p-3 rounded border bg-red-50 text-red-700 border-red-200";
+            }
+        }
+
+        function closeModal() { document.getElementById('codeModal').style.display = 'none'; }
+
+        function renderLogs(data = visitors) {
+            const tbody = document.getElementById('visitorLogs');
+            document.getElementById('stats-total').innerText = visitors.length;
+            tbody.innerHTML = data.map(v => `
+                <tr class="border-b border-gray-100 hover:bg-stone-50">
+                    <td class="p-4 font-bold uppercase">${v.name}</td>
+                    <td class="p-4 font-mono text-gray-500">${v.idNo}</td>
+                    <td class="p-4">${v.company}</td>
+                    <td class="p-4"><span class="px-2 py-1 bg-stone-100 rounded">${v.purpose}</span></td>
+                    <td class="p-4 text-blue-800 font-bold">${v.checkIn}</td>
+                    <td class="p-4 text-amber-800 font-bold">${v.checkOut || '---'}</td>
+                    <td class="p-4 text-center">
+                        <span class="px-3 py-1 rounded-full text-[9px] font-black uppercase ${v.status === 'Active' ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-400'}">
+                            ${v.status}
+                        </span>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function updateLiveFeed() {
+            const feed = document.getElementById('live-feed');
+            feed.innerHTML = visitors.slice(0, 5).map(v => `
+                <div class="p-3 border-l-4 border-uae-gold bg-stone-50 rounded shadow-sm text-[10px]">
+                    <div class="flex justify-between font-black uppercase text-uae-brown">
+                        <span>${v.name}</span>
+                        <span>${v.checkIn}</span>
+                    </div>
+                    <div class="text-gray-500">${v.company} • ${v.status}</div>
+                </div>
+            `).join('') || '<div class="text-center text-gray-400 py-10 text-xs italic">No activity yet.</div>';
+        }
+
+        function handleSearch() {
+            const q = document.getElementById('search_query').value.toLowerCase();
+            const filtered = visitors.filter(v => v.name.toLowerCase().includes(q) || v.company.toLowerCase().includes(q) || v.idNo.includes(q));
+            renderLogs(filtered);
+        }
+
+        function exportToCSV() {
+            let csv = "Name,ID,Company,Purpose,CheckIn,CheckOut,Status\n";
+            visitors.forEach(v => csv += `"${v.name}","${v.idNo}","${v.company}","${v.purpose}","${v.checkIn}","${v.checkOut}","${v.status}"\n`);
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'Embassy_Logs.csv';
+            a.click();
+        }
+    </script>
+</body>
+</html>
