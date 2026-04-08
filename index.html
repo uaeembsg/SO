@@ -4,13 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>UAE Embassy Visitor Management System</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- EmailJS SDK -->
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
     <style>
         :root {
             --uae-brown: #5D4037;
             --uae-brown-dark: #3E2723;
             --uae-gold: #C49A6C;
+            --uae-gold-light: #E0C9A6;
             --uae-dark: #1A1A1A;
             --uae-bg: #FDFBFA;
         }
@@ -56,29 +59,12 @@
             outline: none !important;
         }
 
-        .toast {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 16px 24px;
-            background: white;
-            border-left: 4px solid var(--uae-gold);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            border-radius: 4px;
-            z-index: 1000;
-            animation: slideIn 0.3s ease-out;
-        }
-
-        @keyframes slideIn {
-            from { transform: translateX(400px); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-
         #tab-admin { display: none; }
     </style>
 </head>
 <body class="min-h-screen">
 
+    <!-- Header -->
     <header class="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-40">
         <div class="max-w-[95%] mx-auto px-4 py-3 flex flex-col md:flex-row justify-between items-center">
             <div class="flex items-center space-x-4">
@@ -101,7 +87,7 @@
     <main class="max-w-7xl mx-auto p-4 md:p-8">
         
         <!-- Registration Form -->
-        <section id="page-check-in" class="page max-w-2xl mx-auto">
+        <section id="page-check-in" class="page max-w-2xl mx-auto transition-opacity duration-300">
             <div class="card p-8 rounded-xl">
                 <div class="text-center mb-8">
                     <h2 class="text-2xl font-black text-uae-brown-dark mb-1 uppercase tracking-tight">Visitor Entry Registration</h2>
@@ -149,7 +135,7 @@
                     </div>
 
                     <div class="pt-4">
-                        <button type="submit" id="submitBtn" class="w-full bg-uae-brown text-white font-black py-4 rounded-lg hover:bg-uae-brown-dark transition-all uppercase tracking-[0.2em] shadow-lg disabled:opacity-50">
+                        <button type="submit" id="submitBtn" class="w-full bg-uae-brown text-white font-black py-4 rounded-lg hover:bg-uae-brown-dark transition-all uppercase tracking-[0.2em] shadow-lg">
                             Finalize Entry & Send Pass
                         </button>
                     </div>
@@ -158,7 +144,7 @@
         </section>
 
         <!-- Check-Out Section -->
-        <section id="page-check-out" class="page hidden max-w-md mx-auto">
+        <section id="page-check-out" class="page hidden max-w-md mx-auto transition-opacity duration-300">
             <div class="card p-10 rounded-xl text-center">
                 <div class="mb-6 text-uae-brown">
                     <svg class="w-12 h-12 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -177,11 +163,15 @@
                     </button>
                 </form>
                 <div id="checkOutMessage" class="mt-6 hidden font-bold p-4 rounded-lg border text-xs uppercase tracking-wider"></div>
+                
+                <div id="syncWarning" class="hidden mt-4 p-3 bg-red-50 text-red-600 text-[10px] font-bold uppercase rounded-lg border border-red-100">
+                    Warning: No visitor data found in this browser. Please ensure you are using the same device/browser you used for registration.
+                </div>
             </div>
         </section>
 
         <!-- Admin Registry Section -->
-        <section id="page-admin" class="page hidden">
+        <section id="page-admin" class="page hidden transition-opacity duration-300">
             <div class="card p-8 rounded-xl border-t-8 border-uae-brown">
                 <div class="flex flex-col md:flex-row justify-between items-end gap-4 mb-8">
                     <div>
@@ -189,8 +179,8 @@
                         <p class="text-[10px] uppercase tracking-[0.3em] text-gray-400 font-bold">Confidential Visitor Records</p>
                     </div>
                     <div class="flex gap-3">
-                        <button onclick="exportToCSV()" class="bg-stone-800 text-white px-5 py-2.5 rounded-md text-[10px] font-black uppercase tracking-widest hover:bg-black">Export CSV</button>
-                        <button onclick="clearDatabase()" class="bg-red-50 text-red-600 border border-red-100 px-5 py-2.5 rounded-md text-[10px] font-black uppercase tracking-widest hover:bg-red-600 hover:text-white">Clear Database</button>
+                        <button onclick="exportToCSV()" class="bg-stone-800 text-white px-5 py-2.5 rounded-md text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors">Export CSV</button>
+                        <button onclick="clearDatabase()" class="bg-red-50 text-red-600 border border-red-100 px-5 py-2.5 rounded-md text-[10px] font-black uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all">Clear Database</button>
                     </div>
                 </div>
 
@@ -205,14 +195,11 @@
                                 <th class="p-5 tracking-widest text-right">Passcode</th>
                             </tr>
                         </thead>
-                        <tbody id="visitorLogs" class="text-sm font-medium text-gray-600 divide-y divide-gray-100 bg-white">
-                            <!-- JS loaded rows -->
-                        </tbody>
+                        <tbody id="visitorLogs" class="text-sm font-medium text-gray-600 divide-y divide-gray-100 bg-white"></tbody>
                     </table>
                 </div>
             </div>
         </section>
-
     </main>
 
     <!-- Success Modal -->
@@ -224,17 +211,14 @@
                 </div>
             </div>
             <h3 class="text-2xl font-black text-uae-brown-dark mb-2 uppercase tracking-tight">Access Granted</h3>
-            <p class="text-sm text-gray-500 mb-2 font-medium">Digital pass dispatched to:</p>
-            <p class="font-black text-uae-brown text-lg mb-8" id="confEmail">...</p>
+            <p class="text-sm text-gray-500 mb-8 font-medium">Digital pass dispatched to:<br><span id="confEmail" class="font-black text-uae-brown text-lg">...</span></p>
             
             <div class="bg-stone-50 p-6 rounded-xl border-2 border-dashed border-uae-gold mb-8">
                 <div class="text-[9px] font-black text-gray-400 mb-2 uppercase tracking-[0.2em]">Departure Security Code</div>
                 <div id="displayCode" class="text-5xl font-mono font-black tracking-[0.5rem] text-uae-brown">XXXXXX</div>
             </div>
-
-            <div id="emailStatus" class="mb-6 text-sm font-medium"></div>
             
-            <button onclick="closeModal()" class="w-full bg-uae-brown text-white py-4 rounded-xl font-black uppercase tracking-[0.2em] hover:bg-uae-brown-dark">Close & Return</button>
+            <button onclick="closeModal()" class="w-full bg-uae-brown text-white py-4 rounded-xl font-black uppercase tracking-[0.2em] hover:bg-uae-brown-dark transition-all">Close & Return</button>
         </div>
     </div>
 
@@ -243,9 +227,7 @@
         const EMAIL_JS_SERVICE_ID = "service_v1hs3lg"; 
         const EMAIL_JS_TEMPLATE_ID = "template_axfbbdo"; 
 
-        if (EMAIL_JS_PUBLIC_KEY) {
-            emailjs.init(EMAIL_JS_PUBLIC_KEY);
-        }
+        if (EMAIL_JS_PUBLIC_KEY) emailjs.init(EMAIL_JS_PUBLIC_KEY);
 
         let visitors = [];
 
@@ -253,49 +235,50 @@
             try {
                 const data = localStorage.getItem('embassy_v_db');
                 visitors = data ? JSON.parse(data) : [];
-                return true;
             } catch (e) {
+                console.error("Storage error:", e);
                 visitors = [];
-                return false;
             }
         }
 
         function saveToStorage() {
-            try {
-                localStorage.setItem('embassy_v_db', JSON.stringify(visitors));
-                renderLogs();
-                return true;
-            } catch (e) {
-                showToast('Error saving data', 'error');
-                return false;
-            }
+            localStorage.setItem('embassy_v_db', JSON.stringify(visitors));
+            renderLogs();
         }
 
-        function showToast(message, type = 'info') {
-            const toast = document.createElement('div');
-            toast.className = 'toast';
-            toast.textContent = message;
-            
-            if (type === 'error') {
-                toast.style.borderLeftColor = '#EF4444';
-                toast.style.color = '#DC2626';
-            } else if (type === 'success') {
-                toast.style.borderLeftColor = '#10B981';
-                toast.style.color = '#059669';
-            }
-            
-            document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 4000);
-        }
+        window.onload = () => {
+            loadFromStorage();
+            renderLogs();
 
-        function generateSecurityCode() {
-            return Math.random().toString(36).substring(2, 8).toUpperCase();
-        }
+            const urlParams = new URLSearchParams(window.location.search);
+            
+            if (urlParams.get('admin') === 'true') {
+                document.getElementById('tab-admin').style.display = 'block';
+            }
+
+            const checkoutCode = urlParams.get('checkout');
+            if (checkoutCode) {
+                const cleanCode = checkoutCode.trim().toUpperCase();
+                showPage('check-out');
+                
+                // Show warning if database is empty in this browser
+                if (visitors.length === 0) {
+                    document.getElementById('syncWarning').classList.remove('hidden');
+                }
+                
+                setTimeout(() => {
+                    const inputField = document.getElementById('out_code');
+                    if (inputField) {
+                        inputField.value = cleanCode;
+                        processCheckOut(cleanCode);
+                    }
+                }, 800);
+            }
+        };
 
         function showPage(pageId) {
             document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
             document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-            
             const target = document.getElementById('page-' + pageId);
             if (target) target.classList.remove('hidden');
             const tab = document.getElementById('tab-' + pageId);
@@ -304,71 +287,56 @@
 
         document.getElementById('checkInForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
             const submitBtn = document.getElementById('submitBtn');
-            submitBtn.disabled = true;
-            submitBtn.innerText = "PROCESSING...";
+            const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+            const now = new Date();
+            
+            const v = {
+                id: Date.now(),
+                name: document.getElementById('v_name').value.trim(),
+                phone: document.getElementById('v_phone').value.trim(),
+                idNo: document.getElementById('v_id').value.trim(),
+                email: document.getElementById('v_email').value.trim(),
+                company: document.getElementById('v_company').value.trim(),
+                purpose: document.getElementById('v_purpose').value,
+                checkIn: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                date: now.toLocaleDateString('en-GB'),
+                code: code,
+                status: 'Active',
+                checkOut: null
+            };
 
-            try {
-                const code = generateSecurityCode();
-                const now = new Date();
+            visitors.unshift(v);
+            saveToStorage();
+
+            if (EMAIL_JS_PUBLIC_KEY) {
+                submitBtn.disabled = true;
+                submitBtn.innerText = "SENDING SECURITY PASS...";
                 
-                const visitor = {
-                    id: Date.now(),
-                    name: document.getElementById('v_name').value.trim(),
-                    phone: document.getElementById('v_phone').value.trim(),
-                    idNo: document.getElementById('v_id').value.trim(),
-                    email: document.getElementById('v_email').value.trim(),
-                    company: document.getElementById('v_company').value.trim(),
-                    purpose: document.getElementById('v_purpose').value,
-                    checkIn: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                    date: now.toLocaleDateString('en-GB'),
-                    code: code,
-                    status: 'Active',
-                    checkOut: null
-                };
-
-                visitors.unshift(visitor);
-                saveToStorage();
-
-                if (EMAIL_JS_PUBLIC_KEY) {
-                    submitBtn.innerText = "SENDING EMAIL...";
-                    
-                    const baseUrl = window.location.href.split('?')[0];
-                    const checkoutLink = `${baseUrl}?checkout=${code}`;
-                    
-                    try {
-                        await emailjs.send(EMAIL_JS_SERVICE_ID, EMAIL_JS_TEMPLATE_ID, {
-                            to_email: visitor.email,
-                            visitor_name: visitor.name,
-                            check_in_time: visitor.checkIn,
-                            check_in_date: visitor.date,
-                            checkout_link: checkoutLink,
-                            security_code: code,
-                            company: visitor.company,
-                            purpose: visitor.purpose
-                        });
-                        
-                        document.getElementById('emailStatus').innerHTML = '<span style="color: #10B981; font-weight: bold;">✓ Email sent successfully</span>';
-                        showToast('Email sent successfully', 'success');
-                    } catch (err) { 
-                        document.getElementById('emailStatus').innerHTML = '<span style="color: #F59E0B;">⚠ Check your email inbox</span>';
-                        showToast('Email delivery in progress', 'info');
-                    }
+                // Constructing current location URL correctly
+                const baseUrl = window.location.origin + window.location.pathname;
+                const checkoutLink = `${baseUrl}?checkout=${code}`;
+                
+                try {
+                    await emailjs.send(EMAIL_JS_SERVICE_ID, EMAIL_JS_TEMPLATE_ID, {
+                        to_email: v.email,
+                        visitor_name: v.name,
+                        check_in_time: v.checkIn,
+                        checkout_link: checkoutLink,
+                        security_code: code
+                    });
+                } catch (err) { 
+                    console.error("EmailJS Error:", err); 
                 }
-                
-                document.getElementById('displayCode').innerText = code;
-                document.getElementById('confEmail').innerText = visitor.email;
-                document.getElementById('codeModal').style.display = 'flex';
-                
-                e.target.reset();
-                
-            } catch (error) {
-                showToast('Error processing registration', 'error');
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.innerText = "Finalize Entry & Send Pass";
             }
+            
+            document.getElementById('displayCode').innerText = code;
+            document.getElementById('confEmail').innerText = v.email;
+            document.getElementById('codeModal').style.display = 'flex';
+            
+            submitBtn.disabled = false;
+            submitBtn.innerText = "Finalize Entry & Send Pass";
+            e.target.reset();
         });
 
         document.getElementById('checkOutForm').addEventListener('submit', (e) => {
@@ -385,22 +353,24 @@
 
             if (idx !== -1) {
                 if (visitors[idx].status === 'Completed') {
-                    msg.innerText = "⚠ VISITOR HAS ALREADY DEPARTED.";
-                    msg.className = "mt-6 font-bold p-4 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 text-xs tracking-widest";
-                    showToast('Already checked out', 'info');
+                    msg.innerText = "VISITOR HAS ALREADY DEPARTED.";
+                    msg.className = "mt-6 font-bold p-4 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 text-xs tracking-widest text-center";
                 } else {
                     visitors[idx].status = 'Completed';
                     visitors[idx].checkOut = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                     saveToStorage();
-                    msg.innerText = "✓ EXIT AUTHORIZED. SAFE TRAVELS.";
-                    msg.className = "mt-6 font-bold p-4 rounded-lg bg-green-50 text-green-700 border border-green-200 text-xs tracking-widest";
-                    showToast('Checkout successful', 'success');
-                    document.getElementById('out_code').value = '';
+                    msg.innerText = "EXIT AUTHORIZED. SAFE TRAVELS.";
+                    msg.className = "mt-6 font-bold p-4 rounded-lg bg-green-50 text-green-700 border border-green-200 text-xs tracking-widest text-center";
+                    document.getElementById('syncWarning').classList.add('hidden');
                 }
             } else {
-                msg.innerText = "✗ INVALID SECURITY CODE. PLEASE TRY AGAIN.";
-                msg.className = "mt-6 font-bold p-4 rounded-lg bg-red-50 text-red-700 border border-red-200 text-xs tracking-widest";
-                showToast('Invalid security code', 'error');
+                msg.innerText = "INVALID SECURITY CODE. PLEASE TRY AGAIN.";
+                msg.className = "mt-6 font-bold p-4 rounded-lg bg-red-50 text-red-700 border border-red-200 text-xs tracking-widest text-center";
+                
+                // Only show sync warning if the database is actually empty
+                if (visitors.length === 0) {
+                    document.getElementById('syncWarning').classList.remove('hidden');
+                }
             }
         }
 
@@ -414,7 +384,7 @@
             }
 
             tbody.innerHTML = visitors.map(v => `
-                <tr class="hover:bg-stone-50 transition-colors">
+                <tr class="hover:bg-stone-50 border-b border-gray-100">
                     <td class="p-5 border-l-4 ${v.status === 'Active' ? 'border-uae-gold' : 'border-gray-200'}">
                         <div class="font-black text-uae-brown-dark text-base uppercase">${v.name}</div>
                         <div class="text-[10px] text-gray-400 font-bold uppercase tracking-tight">${v.phone} • ${v.idNo}</div>
@@ -437,24 +407,14 @@
             `).join('');
         }
 
-        function closeModal() { 
-            document.getElementById('codeModal').style.display = 'none'; 
-        }
-
+        function closeModal() { document.getElementById('codeModal').style.display = 'none'; }
         function clearDatabase() {
-            if(confirm("Confirm: Delete all records?")) {
+            if(confirm("Confirm: Delete all confidential records?")) {
                 visitors = [];
                 saveToStorage();
-                showToast('Database cleared', 'info');
             }
         }
-
         function exportToCSV() {
-            if (visitors.length === 0) {
-                showToast('No records to export', 'info');
-                return;
-            }
-
             let csv = "Name,Phone,ID,Email,Company,Purpose,Entry,Exit,Status,Code\n";
             visitors.forEach(v => {
                 csv += `"${v.name}","${v.phone}","${v.idNo}","${v.email}","${v.company}","${v.purpose}","${v.checkIn}","${v.checkOut || ''}","${v.status}","${v.code}"\n`;
@@ -463,35 +423,9 @@
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `Embassy_Logs_${new Date().toISOString().split('T')[0]}.csv`;
+            a.download = `Embassy_Security_Logs_${new Date().toISOString().split('T')[0]}.csv`;
             a.click();
-            showToast('CSV exported', 'success');
         }
-
-        window.onload = () => {
-            loadFromStorage();
-            renderLogs();
-
-            const urlParams = new URLSearchParams(window.location.search);
-            
-            if (urlParams.get('admin') === 'true') {
-                document.getElementById('tab-admin').style.display = 'block';
-            }
-
-            const checkoutCode = urlParams.get('checkout');
-            if (checkoutCode) {
-                const cleanCode = checkoutCode.trim().toUpperCase();
-                showPage('check-out');
-                
-                setTimeout(() => {
-                    const inputField = document.getElementById('out_code');
-                    if (inputField) {
-                        inputField.value = cleanCode;
-                        processCheckOut(cleanCode);
-                    }
-                }, 500);
-            }
-        };
     </script>
 </body>
 </html>
