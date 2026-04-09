@@ -6,8 +6,6 @@
     <title>UAE Embassy Visitor Management System</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- EmailJS SDK -->
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
     
     <style>
         :root {
@@ -25,11 +23,12 @@
             margin: 0;
             padding: 0;
             overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
         }
         .bg-uae-brown { background-color: var(--uae-brown); }
         .text-uae-brown { color: var(--uae-brown); }
-        .border-uae-gold { border-color: var(--uae-gold); }
-        .bg-uae-gold { background-color: var(--uae-gold); }
         
         .card {
             background: white;
@@ -43,29 +42,75 @@
             font-weight: 700;
         }
 
-        #codeModal {
+        .category-square {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 2px solid #f3f4f6;
+            cursor: pointer;
+            aspect-ratio: 1 / 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .category-square:hover {
+            border-color: var(--uae-gold);
+            background-color: #fffaf0;
+            transform: scale(1.02);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            background: #f9fafb;
+            transition: all 0.2s;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: var(--uae-gold);
+            background: white;
+            box-shadow: 0 0 0 3px rgba(196, 154, 108, 0.1);
+        }
+
+        #codeModal, #confirmModal {
             display: none;
             position: fixed;
             inset: 0;
-            background: rgba(26, 26, 26, 0.9);
+            background: rgba(26, 26, 26, 0.95);
             z-index: 100;
             align-items: center;
             justify-content: center;
-            backdrop-filter: blur(8px);
+            backdrop-filter: blur(10px);
+        }
+        
+        .page-transition {
+            transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
         }
 
-        input:focus, select:focus {
-            border-color: var(--uae-brown) !important;
-            box-shadow: 0 0 0 2px rgba(93, 64, 55, 0.1);
-            outline: none !important;
+        .declaration-footer {
+            margin-top: auto;
+            padding: 2rem 1rem;
+            text-align: center;
         }
 
-        #tab-admin { display: none; }
+        /* Loading Spinner */
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--uae-gold);
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-left: 8px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="min-h-screen">
 
-    <!-- Header -->
     <header class="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-40">
         <div class="max-w-[95%] mx-auto px-4 py-3 flex flex-col md:flex-row justify-between items-center">
             <div class="flex items-center space-x-4">
@@ -73,79 +118,109 @@
                     UNITED ARAB<br>EMBASSY
                 </div>
                 <div>
-                    <h1 class="text-lg font-black text-uae-brown uppercase tracking-widest">United Arab Emirates</h1>
-                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Security & Protocol Division</p>
+                    <h1 class="text-lg font-black text-uae-brown uppercase tracking-widest leading-none">The Embassy of the United Arab Emirates</h1>
+                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">سفارة دولة الإمارات العربية المتحدة</p>
                 </div>
             </div>
             <nav class="mt-4 md:mt-0 flex space-x-6 text-[10px] font-black tracking-widest uppercase">
                 <button onclick="showPage('check-in')" id="tab-check-in" class="nav-tab active py-2 transition-all hover:text-uae-gold">Register</button>
                 <button onclick="showPage('check-out')" id="tab-check-out" class="nav-tab py-2 transition-all hover:text-uae-gold">Check-Out</button>
-                <button onclick="showPage('admin')" id="tab-admin" class="nav-tab py-2 transition-all text-red-700">Security Database</button>
+                <button onclick="showPage('admin')" id="tab-admin" class="nav-tab py-2 transition-all text-red-700">S/O Portal</button>
             </nav>
         </div>
     </header>
 
-    <main class="max-w-7xl mx-auto p-4 md:p-8">
+    <main class="flex-grow max-w-7xl mx-auto p-4 md:p-8 w-full">
         
-        <!-- Registration Form -->
-        <section id="page-check-in" class="page max-w-2xl mx-auto transition-opacity duration-300">
-            <div class="card p-8 rounded-xl">
-                <div class="text-center mb-8">
-                    <h2 class="text-2xl font-black text-uae-brown-dark mb-1 uppercase tracking-tight">Visitor Entry Registration</h2>
-                    <div class="h-1 w-20 bg-uae-gold mx-auto rounded-full"></div>
+        <!-- MAIN CATEGORY SELECTION -->
+        <section id="page-check-in" class="page max-w-5xl mx-auto page-transition">
+            <div class="card p-8 md:p-12 rounded-xl text-center">
+                <div class="mb-12">
+                    <h2 class="text-3xl font-black text-uae-brown-dark mb-2 uppercase tracking-tight">Embassy Visitor Terminal</h2>
+                    <div class="h-1.5 w-24 bg-uae-gold mx-auto rounded-full"></div>
                 </div>
                 
-                <form id="checkInForm" class="space-y-5">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        <div>
-                            <label class="block text-[10px] font-black text-gray-400 uppercase mb-1.5 tracking-wider">Full Legal Name</label>
-                            <input type="text" id="v_name" required class="w-full border-gray-200 border-2 p-3 rounded-lg text-sm font-medium" placeholder="Full Name as per ID">
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-6">
+                    <div class="category-square p-6 rounded-2xl text-center space-y-4 shadow-sm" onclick="handleCategory('UAE Citizen')">
+                        <div class="icon-box w-16 h-16 rounded-full bg-stone-100 flex items-center justify-center text-uae-brown">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
                         </div>
-                        <div>
-                            <label class="block text-[10px] font-black text-gray-400 uppercase mb-1.5 tracking-wider">Contact Number</label>
-                            <input type="tel" id="v_phone" required class="w-full border-gray-200 border-2 p-3 rounded-lg text-sm font-medium" placeholder="+971 XX XXX XXXX">
-                        </div>
+                        <span class="text-[10px] font-black uppercase tracking-wider text-uae-brown-dark">UAE Citizen</span>
                     </div>
+                    <div class="category-square p-6 rounded-2xl text-center space-y-4 shadow-sm" onclick="handleCategory('Consulate')">
+                        <div class="icon-box w-16 h-16 rounded-full bg-stone-100 flex items-center justify-center text-uae-brown">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        </div>
+                        <span class="text-[10px] font-black uppercase tracking-wider text-uae-brown-dark">Consulate</span>
+                    </div>
+                    <div class="category-square p-6 rounded-2xl text-center space-y-4 shadow-sm" onclick="handleCategory('Police PROCOM')">
+                        <div class="icon-box w-16 h-16 rounded-full bg-stone-100 flex items-center justify-center text-uae-brown">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                        </div>
+                        <span class="text-[10px] font-black uppercase tracking-wider text-uae-brown-dark">Police PROCOM</span>
+                    </div>
+                    <div class="category-square p-6 rounded-2xl text-center space-y-4 shadow-sm" onclick="handleCategory('Meeting')">
+                        <div class="icon-box w-16 h-16 rounded-full bg-stone-100 flex items-center justify-center text-uae-brown">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                        </div>
+                        <span class="text-[10px] font-black uppercase tracking-wider text-uae-brown-dark">Meeting</span>
+                    </div>
+                    <div class="category-square p-6 rounded-2xl text-center space-y-4 shadow-sm" onclick="handleCategory('Suppliers/Vendors')">
+                        <div class="icon-box w-16 h-16 rounded-full bg-stone-100 flex items-center justify-center text-uae-brown">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
+                        </div>
+                        <span class="text-[10px] font-black uppercase tracking-wider text-uae-brown-dark leading-tight">Suppliers / Vendors</span>
+                    </div>
+                </div>
+            </div>
+        </section>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <!-- FORM CONTAINER -->
+        <section id="page-form-container" class="page hidden max-w-2xl mx-auto page-transition">
+            <div class="card p-8 rounded-xl">
+                <div class="flex items-center justify-between mb-8">
+                    <button onclick="showPage('check-in')" class="text-uae-brown font-bold text-xs uppercase flex items-center">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg> Back
+                    </button>
+                    <h2 id="form-title" class="text-xl font-black text-uae-brown-dark uppercase tracking-wider">Registration</h2>
+                    <div class="w-8"></div>
+                </div>
+                
+                <form id="unifiedForm" class="space-y-6">
+                    <input type="hidden" id="f_category">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-[10px] font-black text-gray-400 uppercase mb-1.5 tracking-wider">Email Address</label>
-                            <input type="email" id="v_email" required class="w-full border-gray-200 border-2 p-3 rounded-lg text-sm font-medium" placeholder="To receive your digital pass">
+                            <label class="block text-[10px] font-black text-gray-400 uppercase mb-1 tracking-widest">Full Name</label>
+                            <input type="text" id="f_name" required class="form-input" placeholder="Enter name">
                         </div>
-                        <div>
-                            <label class="block text-[10px] font-black text-gray-400 uppercase mb-1.5 tracking-wider">ID / Passport Number</label>
-                            <input type="text" id="v_id" required class="w-full border-gray-200 border-2 p-3 rounded-lg text-sm font-medium uppercase" placeholder="NRIC / PASSPORT">
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        <div>
-                            <label class="block text-[10px] font-black text-gray-400 uppercase mb-1.5 tracking-wider">Company / Organization</label>
-                            <input type="text" id="v_company" required class="w-full border-gray-200 border-2 p-3 rounded-lg text-sm font-medium" placeholder="Employer Name">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-black text-gray-400 uppercase mb-1.5 tracking-wider">Purpose of Visit</label>
-                            <select id="v_purpose" required class="w-full border-gray-200 border-2 p-3 rounded-lg text-sm font-medium bg-white">
-                                <option value="">Select Purpose</option>
-                                <option value="Consulate">Consulate / Visa Services</option>
-                                <option value="Diplomatic Meeting">Diplomatic Meeting</option>
-                                <option value="Maintenance">Maintenance / Suppliers</option>
-                                <option value="Citizen Services">UAE Citizen Services</option>
-                            </select>
+                        <div id="div_id">
+                            <label id="label_id" class="block text-[10px] font-black text-gray-400 uppercase mb-1 tracking-widest">NRIC / FIN / Passport</label>
+                            <input type="text" id="f_id" class="form-input" placeholder="ID Number">
                         </div>
                     </div>
-
-                    <div class="pt-4">
-                        <button type="submit" id="submitBtn" class="w-full bg-uae-brown text-white font-black py-4 rounded-lg hover:bg-uae-brown-dark transition-all uppercase tracking-[0.2em] shadow-lg">
-                            Finalize Entry & Send Pass
-                        </button>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div id="div_email">
+                            <label class="block text-[10px] font-black text-gray-400 uppercase mb-1 tracking-widest">Email Address</label>
+                            <input type="email" id="f_email" class="form-input" placeholder="name@email.com">
+                        </div>
+                        <div id="div_phone">
+                            <label class="block text-[10px] font-black text-gray-400 uppercase mb-1 tracking-widest">Phone Number</label>
+                            <input type="tel" id="f_phone" required class="form-input" placeholder="+... Number">
+                        </div>
                     </div>
+                    <div id="div_purpose">
+                        <label class="block text-[10px] font-black text-gray-400 uppercase mb-1 tracking-widest">Purpose of Visit</label>
+                        <select id="f_purpose" required class="form-input bg-white"></select>
+                    </div>
+                    <button type="submit" id="submitBtn" class="w-full bg-uae-brown text-white font-black py-4 rounded-xl hover:bg-uae-brown-dark transition-all uppercase tracking-widest shadow-lg flex justify-center items-center">
+                        <span>Submit & Generate Code</span>
+                    </button>
                 </form>
             </div>
         </section>
 
         <!-- Check-Out Section -->
-        <section id="page-check-out" class="page hidden max-w-md mx-auto transition-opacity duration-300">
+        <section id="page-check-out" class="page hidden max-w-md mx-auto page-transition">
             <div class="card p-10 rounded-xl text-center">
                 <div class="mb-6 text-uae-brown">
                     <svg class="w-12 h-12 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -153,90 +228,189 @@
                     </svg>
                     <h2 class="text-2xl font-black uppercase tracking-tight">Visitor Check-Out</h2>
                 </div>
-                
                 <form id="checkOutForm" class="space-y-6">
                     <div>
                         <label class="block text-[10px] font-black text-gray-400 uppercase mb-2 tracking-widest text-left">Security Code</label>
                         <input type="text" id="out_code" required class="w-full text-center text-3xl tracking-[0.8rem] border-uae-gold border-2 p-5 rounded-xl uppercase font-mono bg-stone-50 font-black text-uae-brown" placeholder="XXXXXX">
                     </div>
-                    <button type="submit" id="checkoutAuthBtn" class="w-full bg-uae-dark text-white font-black py-4 rounded-lg hover:bg-black transition-all uppercase tracking-widest shadow-md">
+                    <button type="submit" class="w-full border-2 border-uae-brown text-uae-brown font-black py-5 rounded-lg uppercase tracking-[0.2em] hover:bg-uae-dark hover:text-white transition-all">
                         Authorize Departure
                     </button>
                 </form>
-                <div id="checkOutMessage" class="mt-6 hidden font-bold p-4 rounded-lg border text-xs uppercase tracking-wider"></div>
+                <div id="checkOutMessage" class="mt-6 hidden font-black p-4 rounded-lg border text-xs uppercase tracking-widest text-center shadow-inner"></div>
             </div>
         </section>
 
-        <!-- Admin Registry Section -->
-        <section id="page-admin" class="page hidden transition-opacity duration-300">
-            <div class="card p-8 rounded-xl border-t-8 border-uae-brown">
-                <div class="flex flex-col md:flex-row justify-between items-end gap-4 mb-8">
+        <!-- S/O Portal (Registry) -->
+        <section id="page-admin" class="page hidden page-transition">
+            <div class="card p-8 rounded-xl">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 space-y-4 md:space-y-0">
                     <div>
-                        <h2 class="text-3xl font-black text-uae-brown-dark uppercase">Security Registry</h2>
-                        <p class="text-[10px] uppercase tracking-[0.3em] text-gray-400 font-bold">Confidential Visitor Records</p>
+                        <h2 class="text-3xl font-black text-uae-brown-dark uppercase tracking-tight">Security Registry</h2>
+                        <p class="text-[10px] uppercase tracking-[0.3em] text-gray-400 font-bold">Active Embassy Logs</p>
                     </div>
-                    <div class="flex gap-3">
-                        <button onclick="exportToCSV()" class="bg-stone-800 text-white px-5 py-2.5 rounded-md text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors">Export CSV</button>
-                        <button onclick="clearDatabase()" class="bg-red-50 text-red-600 border border-red-100 px-5 py-2.5 rounded-md text-[10px] font-black uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all">Clear Database</button>
+                    <div class="flex items-center space-x-3 w-full md:w-auto">
+                        <button onclick="exportToExcel()" class="flex-1 md:flex-none border-2 border-uae-gold text-uae-brown hover:bg-uae-gold hover:text-white px-5 py-2.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                            Export Excel
+                        </button>
+                        <button onclick="logoutAdmin()" class="flex-1 md:flex-none bg-uae-brown text-white px-5 py-2.5 rounded-md text-[10px] font-black uppercase tracking-widest hover:bg-uae-brown-dark transition-all">Logout</button>
                     </div>
                 </div>
-
-                <div class="overflow-x-auto rounded-xl border border-gray-100 shadow-inner">
-                    <table class="w-full text-left border-collapse min-w-[1000px]">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
                         <thead class="bg-stone-50 text-[10px] uppercase font-black text-uae-brown-dark border-b-2 border-gray-200">
                             <tr>
-                                <th class="p-5 tracking-widest">Visitor / Contact</th>
-                                <th class="p-5 tracking-widest">Company & Purpose</th>
-                                <th class="p-5 tracking-widest text-center">In / Out</th>
-                                <th class="p-5 tracking-widest text-center">Status</th>
-                                <th class="p-5 tracking-widest text-right">Passcode</th>
+                                <th class="p-5">Visitor</th>
+                                <th class="p-5">Details</th>
+                                <th class="p-5 text-center">In / Out</th>
+                                <th class="p-5 text-center">Status</th>
+                                <th class="p-5 text-right">Action / Code</th>
                             </tr>
                         </thead>
-                        <tbody id="visitorLogs" class="text-sm font-medium text-gray-600 divide-y divide-gray-100 bg-white"></tbody>
+                        <tbody id="visitorLogs" class="text-sm divide-y divide-gray-100"></tbody>
                     </table>
                 </div>
             </div>
         </section>
+
+        <!-- S/O Login -->
+        <section id="page-admin-login" class="page hidden max-w-md mx-auto page-transition">
+            <div class="card p-10 rounded-xl text-center">
+                <h2 class="text-xl font-black uppercase tracking-widest text-uae-dark mb-8">S/O Portal Access</h2>
+                <form id="adminLoginForm" class="space-y-4">
+                    <input type="text" id="login_user" placeholder="Username" required class="form-input">
+                    <input type="password" id="login_pass" placeholder="Password" required class="form-input">
+                    <button type="submit" class="w-full bg-uae-dark text-white font-black py-4 rounded-xl uppercase tracking-widest">Login</button>
+                </form>
+            </div>
+        </section>
     </main>
 
-    <!-- Success Modal -->
+    <footer class="declaration-footer">
+        <p class="text-red-600 text-[10px] font-bold uppercase tracking-widest leading-relaxed max-w-3xl mx-auto px-4">
+            Declaration: All information provided must be true and accurate. Our security personnel will conduct a check with a physical passport or identification card. Please comply with all security instructions.
+        </p>
+    </footer>
+
+    <!-- Modals -->
     <div id="codeModal">
         <div class="bg-white p-10 rounded-2xl max-w-lg w-full mx-4 text-center border-t-[12px] border-uae-gold shadow-2xl">
-            <div class="text-emerald-500 mb-6">
-                <div class="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto">
-                    <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
-                </div>
-            </div>
-            <h3 class="text-2xl font-black text-uae-brown-dark mb-2 uppercase tracking-tight">Access Granted</h3>
-            <p class="text-sm text-gray-500 mb-8 font-medium">Digital pass dispatched to:<br><span id="confEmail" class="font-black text-uae-brown text-lg">...</span></p>
-            
-            <div class="bg-stone-50 p-6 rounded-xl border-2 border-dashed border-uae-gold mb-8">
-                <div class="text-[9px] font-black text-gray-400 mb-2 uppercase tracking-[0.2em]">Departure Security Code</div>
+            <h3 class="text-2xl font-black text-uae-brown-dark mb-2 uppercase tracking-tight">Registration Complete</h3>
+            <div class="bg-stone-50 p-6 rounded-xl border-2 border-dashed border-uae-gold my-8">
                 <div id="displayCode" class="text-5xl font-mono font-black tracking-[0.5rem] text-uae-brown">XXXXXX</div>
             </div>
-            
-            <button onclick="closeModal()" class="w-full bg-uae-brown text-white py-4 rounded-xl font-black uppercase tracking-[0.2em] hover:bg-uae-brown-dark transition-all">Close & Return</button>
+            <button onclick="closeModal()" class="w-full bg-uae-brown text-white py-4 rounded-xl font-black uppercase tracking-[0.2em]">Back to Home</button>
+        </div>
+    </div>
+
+    <div id="confirmModal">
+        <div class="bg-white p-8 rounded-2xl max-w-sm w-full mx-4 text-center shadow-2xl">
+            <h3 class="text-lg font-black text-uae-brown-dark mb-4 uppercase tracking-widest">Confirm Departure?</h3>
+            <div id="confirmVisitorInfo" class="text-xs text-gray-500 font-bold mb-6 uppercase"></div>
+            <div class="grid grid-cols-2 gap-4">
+                <button onclick="closeConfirmModal()" class="py-3 bg-stone-100 text-stone-500 font-black rounded-lg uppercase tracking-widest">Cancel</button>
+                <button id="finalConfirmBtn" class="py-3 bg-uae-brown text-white font-black rounded-lg uppercase tracking-widest">Confirm</button>
+            </div>
         </div>
     </div>
 
     <script>
-        const EMAIL_JS_PUBLIC_KEY = "XzZCCmauKvPjDMelV"; 
-        const EMAIL_JS_SERVICE_ID = "service_v1hs3lg"; 
-        const EMAIL_JS_TEMPLATE_ID = "template_axfbbdo"; 
-
-        if (EMAIL_JS_PUBLIC_KEY) emailjs.init(EMAIL_JS_PUBLIC_KEY);
-
-        // State
+        const apiKey = ""; // Runtime provides this
         let visitors = [];
+        let isAdminAuthenticated = false;
+
+        const FORM_CONFIG = {
+            'UAE Citizen': { purposes: ['Attestation', 'Notarization', 'Certificate', 'Consultation', 'Traveling Documents'] },
+            'Consulate': { purposes: ['Submitting Documents', 'Collecting Documents'] },
+            'Police PROCOM': { purposes: ['Patrolling Embassy', 'Attending Call'] },
+            'Meeting': { purposes: ['Meeting with a Diplomat', 'Meeting with a Local Staff'] },
+            'Suppliers/Vendors': { purposes: ['Maintenance', 'Delivery', 'Meeting', 'Others'] }
+        };
+
+        // --- TTS Logic ---
+        async function playVoiceMessage(text) {
+            const payload = {
+                contents: [{ parts: [{ text: `Say in a calm, professional, soft tone: ${text}` }] }],
+                generationConfig: { 
+                    responseModalities: ["AUDIO"],
+                    speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } } } 
+                },
+                model: "gemini-2.5-flash-preview-tts"
+            };
+
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+            const fetchWithRetry = async (retries = 5, delay = 1000) => {
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!response.ok) throw new Error('API Failed');
+                    const data = await response.json();
+                    return data.candidates[0].content.parts[0].inlineData;
+                } catch (e) {
+                    if (retries > 0) {
+                        await new Promise(r => setTimeout(r, delay));
+                        return fetchWithRetry(retries - 1, delay * 2);
+                    }
+                    throw e;
+                }
+            };
+
+            try {
+                const audioData = await fetchWithRetry();
+                const pcmData = atob(audioData.data);
+                const sampleRate = parseInt(audioData.mimeType.split('rate=')[1]) || 24000;
+                
+                // Convert PCM to WAV
+                const wavBlob = pcmToWav(pcmData, sampleRate);
+                const audioUrl = URL.createObjectURL(wavBlob);
+                const audio = new Audio(audioUrl);
+                audio.play();
+            } catch (err) {
+                console.error("Audio playback error:", err);
+            }
+        }
+
+        function pcmToWav(pcmString, sampleRate) {
+            const len = pcmString.length;
+            const buf = new ArrayBuffer(44 + len);
+            const view = new DataView(buf);
+            const writeString = (offset, string) => {
+                for (let i = 0; i < string.length; i++) view.setUint8(offset + i, string.charCodeAt(i));
+            };
+
+            writeString(0, 'RIFF');
+            view.setUint32(4, 36 + len, true);
+            writeString(8, 'WAVE');
+            writeString(12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true);
+            view.setUint16(22, 1, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, sampleRate * 2, true);
+            view.setUint16(32, 2, true);
+            view.setUint16(34, 16, true);
+            writeString(36, 'data');
+            view.setUint32(40, len, true);
+
+            for (let i = 0; i < len; i += 2) {
+                const sample = (pcmString.charCodeAt(i) | (pcmString.charCodeAt(i + 1) << 8));
+                view.setInt16(44 + i, sample, true);
+            }
+            return new Blob([buf], { type: 'audio/wav' });
+        }
+
+        // --- Core Application Logic ---
 
         function loadFromStorage() {
             try {
                 const data = localStorage.getItem('embassy_v_db');
                 visitors = data ? JSON.parse(data) : [];
-            } catch (e) {
-                console.error("Storage error:", e);
-                visitors = [];
-            }
+            } catch (e) { visitors = []; }
         }
 
         function saveToStorage() {
@@ -244,187 +418,170 @@
             renderLogs();
         }
 
-        window.onload = () => {
-            loadFromStorage();
-            renderLogs();
-
-            // Handle Deep Links
-            const urlParams = new URLSearchParams(window.location.search);
-            
-            if (urlParams.get('admin') === 'true') {
-                const adminTab = document.getElementById('tab-admin');
-                if (adminTab) adminTab.style.display = 'block';
-            }
-
-            const checkoutCode = urlParams.get('checkout');
-            if (checkoutCode) {
-                const cleanCode = checkoutCode.trim().toUpperCase();
-                showPage('check-out');
-                const inputField = document.getElementById('out_code');
-                if (inputField) {
-                    inputField.value = cleanCode;
-                    processCheckOut(cleanCode);
-                }
-            }
-        };
+        window.onload = () => { loadFromStorage(); renderLogs(); };
 
         function showPage(pageId) {
+            if (pageId === 'admin' && !isAdminAuthenticated) pageId = 'admin-login';
             document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
             document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-            const target = document.getElementById('page-' + pageId);
-            if (target) target.classList.remove('hidden');
-            const tab = document.getElementById('tab-' + pageId);
-            if (tab) tab.classList.add('active');
+            document.getElementById('page-' + pageId).classList.remove('hidden');
+            if (pageId === 'admin' || pageId === 'admin-login') document.getElementById('tab-admin').classList.add('active');
+            else document.getElementById('tab-' + (pageId === 'check-out' ? 'check-out' : 'check-in')).classList.add('active');
+            
+            if (pageId === 'admin') renderLogs();
         }
 
-        function closeModal() { 
-            document.getElementById('codeModal').style.display = 'none'; 
+        function handleCategory(category) {
+            document.getElementById('form-title').innerText = category;
+            document.getElementById('f_category').value = category;
+            const select = document.getElementById('f_purpose');
+            select.innerHTML = '<option value="">Select Option...</option>' + 
+                FORM_CONFIG[category].purposes.map(p => `<option value="${p}">${p}</option>`).join('');
+            showPage('form-container');
         }
 
-        document.getElementById('checkInForm').addEventListener('submit', async (e) => {
+        document.getElementById('unifiedForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const submitBtn = document.getElementById('submitBtn');
+            const originalContent = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<span>Processing...</span><div class="loader"></div>`;
+
             const code = Math.random().toString(36).substring(2, 8).toUpperCase();
             const now = new Date();
-            
+
             const v = {
                 id: Date.now(),
-                name: document.getElementById('v_name').value.trim(),
-                phone: document.getElementById('v_phone').value.trim(),
-                idNo: document.getElementById('v_id').value.trim(),
-                email: document.getElementById('v_email').value.trim(),
-                company: document.getElementById('v_company').value.trim(),
-                purpose: document.getElementById('v_purpose').value,
+                category: document.getElementById('f_category').value,
+                name: document.getElementById('f_name').value,
+                idNumber: document.getElementById('f_id').value || 'N/A',
+                phone: document.getElementById('f_phone').value || 'N/A',
+                purpose: document.getElementById('f_purpose').value,
                 checkIn: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                 date: now.toLocaleDateString('en-GB'),
                 code: code,
-                status: 'Active',
-                checkOut: null,
-                timestamp: Date.now()
+                status: 'Active'
             };
 
-            // Save immediately to local storage
             visitors.unshift(v);
             saveToStorage();
-
-            submitBtn.disabled = true;
-            submitBtn.innerText = "Authorizing Security Pass...";
-
-            try {
-                if (EMAIL_JS_PUBLIC_KEY) {
-                    // Safely build the dynamic URL for checkout without hashes/params
-                    const baseUrl = window.location.origin + window.location.pathname;
-                    const checkoutLink = `${baseUrl}?checkout=${code}`;
-                    
-                    await emailjs.send(EMAIL_JS_SERVICE_ID, EMAIL_JS_TEMPLATE_ID, {
-                        to_email: v.email,
-                        visitor_name: v.name,
-                        check_in_time: v.checkIn,
-                        checkout_link: checkoutLink,
-                        security_code: code
-                    });
-                }
-            } catch (err) {
-                console.error("EmailJS Error:", err);
-            } finally {
-                document.getElementById('displayCode').innerText = code;
-                document.getElementById('confEmail').innerText = v.email;
-                document.getElementById('codeModal').style.display = 'flex';
-                submitBtn.disabled = false;
-                submitBtn.innerText = "Finalize Entry & Send Pass";
-                e.target.reset();
-            }
+            
+            await playVoiceMessage("Thank you, your registration is complete. Please keep your security code for departure.");
+            
+            document.getElementById('displayCode').innerText = code;
+            document.getElementById('codeModal').style.display = 'flex';
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalContent;
+            e.target.reset();
         });
 
         document.getElementById('checkOutForm').addEventListener('submit', (e) => {
             e.preventDefault();
-            processCheckOut(document.getElementById('out_code').value.trim().toUpperCase());
+            const code = document.getElementById('out_code').value.trim().toUpperCase();
+            handleManualCheckOut(code);
         });
 
-        function processCheckOut(code) {
-            if (!code) return;
-            
-            // Reload storage to ensure we have the latest local data
-            loadFromStorage();
-            
+        async function handleManualCheckOut(code) {
             const msg = document.getElementById('checkOutMessage');
-            msg.classList.remove('hidden');
-            
-            const visitor = visitors.find(v => v.code === code);
+            const visitor = visitors.find(v => v.code === code && v.status === 'Active');
 
             if (visitor) {
-                if (visitor.status === 'Completed') {
-                    msg.innerText = "SECURITY ALERT: VISITOR PREVIOUSLY DEPARTED.";
-                    msg.className = "mt-6 font-bold p-4 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 text-xs tracking-widest text-center";
-                } else {
+                document.getElementById('confirmVisitorInfo').innerText = visitor.name + " (" + visitor.code + ")";
+                document.getElementById('confirmModal').style.display = 'flex';
+                document.getElementById('finalConfirmBtn').onclick = async () => {
                     visitor.status = 'Completed';
                     visitor.checkOut = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                     saveToStorage();
-                    msg.innerText = "EXIT AUTHORIZED. SAFE TRAVELS.";
-                    msg.className = "mt-6 font-bold p-4 rounded-lg bg-green-50 text-green-700 border border-green-200 text-xs tracking-widest text-center";
-                }
-            } else {
-                // If it's empty, it means they are on a new device/browser
-                if (visitors.length === 0) {
-                    msg.innerText = "✗ DATA NOT FOUND ON THIS DEVICE.\n(Please open this link in the same browser you used to register).";
-                } else {
-                    msg.innerText = "✗ INVALID SECURITY CODE. PLEASE TRY AGAIN.";
-                }
-                msg.className = "mt-6 font-bold p-4 rounded-lg bg-red-50 text-red-700 border border-red-200 text-xs tracking-widest text-center";
+                    
+                    document.getElementById('confirmModal').style.display = 'none';
+                    if (msg) {
+                        msg.classList.remove('hidden');
+                        msg.innerText = "EXIT AUTHORIZED. SAFE TRAVELS.";
+                        msg.className = "mt-6 font-black p-4 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs tracking-widest text-center shadow-inner";
+                    }
+                    
+                    await playVoiceMessage("Thank you for visiting. Your departure is authorized. Safe travels.");
+                    const outCodeInput = document.getElementById('out_code');
+                    if (outCodeInput) outCodeInput.value = '';
+                };
+            } else if (msg) {
+                msg.classList.remove('hidden');
+                msg.innerText = "INVALID CODE OR ALREADY DEPARTED.";
+                msg.className = "mt-6 font-black p-4 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 text-xs tracking-widest text-center shadow-inner";
             }
         }
+
+        function closeModal() { document.getElementById('codeModal').style.display = 'none'; showPage('check-in'); }
+        function closeConfirmModal() { document.getElementById('confirmModal').style.display = 'none'; }
+        function logoutAdmin() { isAdminAuthenticated = false; showPage('check-in'); }
+
+        document.getElementById('adminLoginForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (document.getElementById('login_user').value === 'so' && document.getElementById('login_pass').value === 'so123') {
+                isAdminAuthenticated = true;
+                showPage('admin');
+            }
+        });
 
         function renderLogs() {
             const tbody = document.getElementById('visitorLogs');
             if (!tbody) return;
+            tbody.innerHTML = visitors.length ? visitors.map(v => `
+                <tr class="border-b border-gray-100">
+                    <td class="p-5">
+                        <div class="font-black uppercase text-uae-brown-dark">${v.name}</div>
+                        <div class="text-[9px] text-gray-400 font-bold uppercase">${v.phone}</div>
+                    </td>
+                    <td class="p-5 text-[10px] text-gray-500 font-bold uppercase">${v.category} - ${v.purpose}</td>
+                    <td class="p-5 text-center font-bold">In: ${v.checkIn}<br>Out: ${v.checkOut || '--'}</td>
+                    <td class="p-5 text-center"><span class="px-3 py-1 rounded-full text-[9px] font-black uppercase ${v.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'}">${v.status}</span></td>
+                    <td class="p-5 text-right font-mono font-black">
+                        ${v.status === 'Active' ? 
+                            `<button onclick="handleManualCheckOut('${v.code}')" class="bg-amber-600 text-white px-3 py-1.5 rounded text-[8px] uppercase tracking-tighter hover:bg-amber-700 transition-colors mr-2">Check-Out</button>` : ''
+                        }
+                        <span class="text-uae-brown">${v.code}</span>
+                    </td>
+                </tr>
+            `).join('') : '<tr><td colspan="5" class="p-10 text-center text-gray-300 font-bold uppercase tracking-widest">No Records Found</td></tr>';
+        }
 
+        function exportToExcel() {
             if (visitors.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="p-20 text-center text-gray-300 font-black uppercase tracking-widest">Registry Empty</td></tr>`;
+                alert("No data available to export.");
                 return;
             }
 
-            tbody.innerHTML = visitors.map(v => `
-                <tr class="hover:bg-stone-50 border-b border-gray-100">
-                    <td class="p-5 border-l-4 ${v.status === 'Active' ? 'border-uae-gold' : 'border-gray-200'}">
-                        <div class="font-black text-uae-brown-dark text-base uppercase">${v.name}</div>
-                        <div class="text-[10px] text-gray-400 font-bold uppercase tracking-tight">${v.phone} • ${v.idNo}</div>
-                    </td>
-                    <td class="p-5">
-                        <div class="font-bold text-gray-800">${v.company}</div>
-                        <div class="text-[10px] uppercase font-black text-uae-gold">${v.purpose}</div>
-                    </td>
-                    <td class="p-5 text-center font-black">
-                        <div class="text-blue-900">${v.checkIn}</div>
-                        <div class="text-amber-800">${v.checkOut || '---'}</div>
-                    </td>
-                    <td class="p-5 text-center">
-                        <span class="inline-block px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${v.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-stone-100 text-stone-500'}">
-                            ${v.status}
-                        </span>
-                    </td>
-                    <td class="p-5 text-right font-mono font-black text-uae-brown tracking-widest">${v.code}</td>
-                </tr>
-            `).join('');
-        }
+            // Define CSV Headers
+            const headers = ["Date", "Name", "ID/NRIC", "Phone", "Category", "Purpose", "Check-In", "Check-Out", "Status", "Security Code"];
+            
+            // Map data to rows
+            const rows = visitors.map(v => [
+                v.date,
+                `"${v.name}"`, // Wrap in quotes to handle commas in names
+                v.idNumber,
+                v.phone,
+                v.category,
+                `"${v.purpose}"`,
+                v.checkIn,
+                v.checkOut || "N/A",
+                v.status,
+                v.code
+            ]);
 
-        function clearDatabase() {
-            if(confirm("DANGER: This will wipe ALL records. Proceed?")) {
-                visitors = [];
-                saveToStorage();
-            }
-        }
+            // Combine headers and rows
+            let csvContent = "data:text/csv;charset=utf-8," 
+                + headers.join(",") + "\n"
+                + rows.map(r => r.join(",")).join("\n");
 
-        function exportToCSV() {
-            let csv = "Name,Phone,ID,Email,Company,Purpose,Entry,Exit,Status,Code\n";
-            visitors.forEach(v => {
-                csv += `"${v.name}","${v.phone}","${v.idNo}","${v.email}","${v.company}","${v.purpose}","${v.checkIn}","${v.checkOut || ''}","${v.status}","${v.code}"\n`;
-            });
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `UAE_Embassy_Security_Logs_${new Date().toISOString().split('T')[0]}.csv`;
-            a.click();
+            // Create download link
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            const fileName = `UAE_Embassy_Logs_${new Date().toISOString().split('T')[0]}.csv`;
+            link.setAttribute("download", fileName);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
     </script>
 </body>
